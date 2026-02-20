@@ -210,15 +210,23 @@ Create a CMS collection in Webflow with the fields below. **The field slugs must
 
 Each listing gets a 0–100 quality score based on data completeness (salary data, description length, company info, etc.). Only listings scoring **>= 40** are published. Listings scoring **>= 70** are marked as featured (`is-featured = true`) — use this in Webflow to highlight top listings.
 
-## Data Sources
+## Data Sources and Ingestion Flow
 
-| Source | API | Auth | Cost | Description Quality |
-|--------|-----|------|------|-------------------|
-| **Greenhouse** | `boards-api.greenhouse.io/v1/boards/{token}/jobs` | None (public) | Free | Full HTML descriptions |
-| **Lever** | `api.lever.co/v0/postings/{company}` | None (public) | Free | Full structured descriptions |
-| **Adzuna** | `api.adzuna.com/v1/api/jobs/{country}/search` | App ID + Key | Free tier (250 req/day) | ~500 char snippets |
+The pipeline pulls jobs from **three independent sources** to maximize coverage of the ~6,700 A&E firms in the CSV:
 
-Greenhouse and Lever are the primary sources — they provide full, untruncated job descriptions and require no authentication. Adzuna supplements coverage for firms not on those platforms. When the same job appears in multiple sources, the pipeline keeps the version with the **longest description** (Greenhouse/Lever wins over Adzuna snippets).
+| Source | API | Auth | Cost | What It Provides |
+|--------|-----|------|------|-----------------|
+| **Greenhouse** | `boards-api.greenhouse.io/v1/boards/{token}/jobs` | None (public) | Free | Full HTML descriptions, department, location, apply URL |
+| **Lever** | `api.lever.co/v0/postings/{company}` | None (public) | Free | Full structured descriptions, salary range, commitment type, team/department |
+| **Adzuna** | `api.adzuna.com/v1/api/jobs/{country}/search` | App ID + Key | Free tier (250 req/day) | Truncated ~500 char snippets, salary data, contract type |
+
+### How ingestion works
+
+1. **Greenhouse + Lever** (ATS-based, run first): The pipeline reads `AccountsforBoard.csv` and checks `data/ats-cache.json` to see which firms have a Greenhouse board or Lever company page (detected by `scripts/detect-ats.ts`). For each match, it fetches **all current job postings** directly from that firm's board. These provide full, untruncated job descriptions.
+
+2. **Adzuna** (keyword search, run second): The pipeline runs keyword searches against the Adzuna API (e.g. "project manager architecture", "construction operations director"). This catches jobs from firms that don't use Greenhouse or Lever. Adzuna descriptions are truncated (~500 chars).
+
+3. **Cross-source deduplication**: All results are merged and deduplicated. A fingerprint is built from `normalized(company) + normalized(title) + normalized(location)`. When the same job appears in multiple sources, the pipeline keeps the version with the **longest description** — so Greenhouse/Lever full descriptions always win over Adzuna snippets.
 
 ## Managing the Firm List
 
@@ -317,9 +325,13 @@ AccountsforBoard.csv          # ← At repo root (one level above ae-job-board/)
 8. **Quality Filter** — Only listings scoring >= 40 are published
 9. **Push to Webflow** — Create new items, update existing, expire stale, publish site
 
-## Modifying Search Queries
+## Customizing What Gets Ingested
 
-Edit the `SEARCH_QUERIES` array in `src/ingest.ts` to change which Adzuna keyword searches are performed.
+- **Which firms are included**: Edit `AccountsforBoard.csv` and re-run `detect-ats.ts` (see "Managing the Firm List" above)
+- **Greenhouse/Lever**: All jobs from detected boards are fetched automatically — no configuration needed
+- **Adzuna keyword searches**: Edit the `SEARCH_QUERIES` array in `src/ingest.ts` to change which keyword searches are performed
+- **Role filtering**: Edit `data/role-keywords.json` to change which job titles/descriptions pass the filter
+- **Tool detection**: Edit `data/tool-keywords.json` to change which tools are extracted from descriptions
 
 ## Tests
 
