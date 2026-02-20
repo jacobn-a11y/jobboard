@@ -1,0 +1,26 @@
+{
+  "name": "ae-job-board",
+  "version": "1.0.0",
+  "description": "Automated A&E job board pipeline — ingests, filters, enriches, and publishes architecture & engineering job listings",
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "dry-run": "tsx src/index.ts --dry-run",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build-firms": "tsx scripts/build-firm-list.ts",
+    "backfill": "tsx scripts/backfill.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
