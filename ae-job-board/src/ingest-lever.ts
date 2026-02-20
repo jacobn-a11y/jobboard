@@ -29,8 +29,9 @@ interface LeverPosting {
   }>;
   hostedUrl: string; // Public URL for the posting
   applyUrl: string;
-  createdAt: number; // Unix timestamp in ms
+  createdAt?: number; // Unix timestamp in ms (undocumented, may be absent)
   workplaceType?: string;
+  country?: string;
   salaryRange?: {
     min: number;
     max: number;
@@ -82,15 +83,15 @@ export async function fetchLeverPostings(
   companyName: string
 ): Promise<RawListing[]> {
   const allPostings: LeverPosting[] = [];
-  let offset: string | null = null;
+  let skip = 0;
+  const pageSize = 100;
 
   while (true) {
     await rateLimiter.acquire();
 
-    let url = `${LEVER_BASE}/${companySlug}?mode=json&limit=100`;
-    if (offset) url += `&offset=${offset}`;
-
+    const url = `${LEVER_BASE}/${companySlug}?mode=json&limit=${pageSize}&skip=${skip}`;
     const response = await fetch(url);
+
     if (!response.ok) {
       if (response.status === 404) break;
       throw new Error(`Lever API error ${response.status} for ${companySlug}`);
@@ -101,12 +102,9 @@ export async function fetchLeverPostings(
 
     allPostings.push(...postings);
 
-    // Lever uses "next" offset if more results exist
-    // If we got fewer than the limit, we're done
-    if (postings.length < 100) break;
-
-    // Use last posting's id as offset for next page
-    offset = postings[postings.length - 1].id;
+    // If we got fewer than the page size, we're done
+    if (postings.length < pageSize) break;
+    skip += pageSize;
   }
 
   return allPostings.map((posting): RawListing => {
@@ -144,7 +142,9 @@ export async function fetchLeverPostings(
       location: posting.categories?.location ?? "",
       description,
       sourceUrl: posting.hostedUrl,
-      datePosted: new Date(posting.createdAt).toISOString(),
+      datePosted: posting.createdAt
+        ? new Date(posting.createdAt).toISOString()
+        : new Date().toISOString(),
       salaryMin,
       salaryMax,
       salaryIsPredicted: false,
