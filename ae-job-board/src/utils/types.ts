@@ -9,7 +9,11 @@ export interface RawListing {
   datePosted: string;
   salaryMin: number | null;
   salaryMax: number | null;
+  salaryIsPredicted: boolean;
   contractType: string | null;
+  contractTime: string | null;
+  category: string | null;
+  adzunaId: string | null;
   source: "adzuna";
 }
 

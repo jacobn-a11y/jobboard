@@ -75,7 +75,7 @@ async function run(): Promise<void> {
         // 3c: Salary
         let salaryMin = listing.salaryMin;
         let salaryMax = listing.salaryMax;
-        let salaryEstimated = false;
+        let salaryEstimated = listing.salaryIsPredicted;
 
         if (!salaryMin || !salaryMax) {
           const estimate = estimateSalary(

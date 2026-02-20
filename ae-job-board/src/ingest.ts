@@ -35,15 +35,19 @@ const SEARCH_QUERIES = [
 const rateLimiter = new RateLimiter(4, 1000, "Adzuna"); // 4 req/sec
 
 interface AdzunaResult {
+  id: string;
   title: string;
-  company: { display_name: string };
-  location: { display_name: string };
+  company?: { display_name: string };
+  location?: { display_name: string; area?: string[] };
   description: string;
   redirect_url: string;
   created: string;
   salary_min?: number;
   salary_max?: number;
+  salary_is_predicted?: string; // "0" = from ad, "1" = Adzuna estimate
   contract_type?: string;
+  contract_time?: string;
+  category?: { label: string; tag: string };
 }
 
 interface AdzunaResponse {
@@ -61,7 +65,11 @@ function mapResult(result: AdzunaResult): RawListing {
     datePosted: result.created,
     salaryMin: result.salary_min ?? null,
     salaryMax: result.salary_max ?? null,
+    salaryIsPredicted: result.salary_is_predicted === "1",
     contractType: result.contract_type ?? null,
+    contractTime: result.contract_time ?? null,
+    category: result.category?.label ?? null,
+    adzunaId: result.id ?? null,
     source: "adzuna",
   };
 }
@@ -114,9 +122,9 @@ export async function ingestFromAdzuna(
         if (results.length === 0) break;
 
         for (const result of results) {
-          const url = result.redirect_url;
-          if (!url || seen.has(url)) continue;
-          seen.add(url);
+          const dedup = result.id ?? result.redirect_url;
+          if (!dedup || seen.has(dedup)) continue;
+          seen.add(dedup);
           listings.push(mapResult(result));
         }
 
