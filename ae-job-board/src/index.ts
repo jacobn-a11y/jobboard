@@ -15,10 +15,12 @@ import type { EnrichedListing, PipelineSummary } from "./utils/types.ts";
 
 const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");
+const skipPdl = args.includes("--skip-pdl");
 const limitIdx = args.indexOf("--limit");
 const limit = limitIdx >= 0 ? parseInt(args[limitIdx + 1], 10) : undefined;
 
-if (dryRun) logger.info("🏃 DRY RUN MODE — no CMS writes");
+if (dryRun) logger.info("DRY RUN MODE — no CMS writes");
+if (skipPdl) logger.info("Skipping PDL enrichment (--skip-pdl)");
 if (limit) logger.info(`Limiting to ${limit} listings`);
 
 // ── Main pipeline ────────────────────────────────────────────────────
@@ -65,9 +67,9 @@ async function run(): Promise<void> {
       const stepLabel = `[${i + 1}/${filtered.length}]`;
 
       try {
-        // 3a: Company enrichment
+        // 3a: Company enrichment (skip if --skip-pdl)
         logger.info(`${stepLabel} Enriching: ${listing.title} at ${listing.company}`);
-        const enrichment = await enrichCompany(listing.company);
+        const enrichment = skipPdl ? null : await enrichCompany(listing.company);
 
         // 3b: ENR rank
         const enrRank = firmMatch?.enrRank ?? lookupENRRank(listing.company);
@@ -135,6 +137,8 @@ async function run(): Promise<void> {
           salaryMax,
           salaryEstimated,
           firmMatch,
+          companyWebsite: firmMatch?.website ?? "",
+          companyLinkedin: firmMatch?.linkedin ?? "",
           enrichment,
           enrRank,
           roleSummary,
@@ -196,6 +200,11 @@ async function run(): Promise<void> {
         logger.info(
           `    Slug: ${listing.slug} | Tools: ${listing.toolsMentioned || "none"} | Salary: $${listing.salaryMin?.toLocaleString() ?? "?"}-$${listing.salaryMax?.toLocaleString() ?? "?"}${listing.salaryEstimated ? " (est)" : ""}`
         );
+        if (listing.companyWebsite || listing.companyLinkedin) {
+          logger.info(
+            `    Web: ${listing.companyWebsite || "—"} | LinkedIn: ${listing.companyLinkedin || "—"}`
+          );
+        }
       }
       logger.info(`DRY RUN complete — ${publishable.length} items would be pushed`);
     } else {

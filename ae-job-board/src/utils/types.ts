@@ -62,6 +62,8 @@ export interface EnrichedListing {
 
   // From firm match
   firmMatch: AEFirm | null;
+  companyWebsite: string;
+  companyLinkedin: string;
 
   // From enrichment
   enrichment: CompanyEnrichment | null;
@@ -106,6 +108,8 @@ export interface WebflowCMSItem {
     "enr-rank": number | null;
     "company-size": string;
     "company-hq": string;
+    "company-website": string;
+    "company-linkedin": string;
     "role-summary": string;
     "company-description": string;
     "tools-mentioned": string;
