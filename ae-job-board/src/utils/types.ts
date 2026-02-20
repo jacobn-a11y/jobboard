@@ -1,4 +1,6 @@
-// ── Raw listing from Adzuna ──────────────────────────────────────────
+// ── Raw listing from any source ──────────────────────────────────────
+
+export type ListingSource = "adzuna" | "greenhouse" | "lever";
 
 export interface RawListing {
   title: string;
@@ -14,7 +16,7 @@ export interface RawListing {
   contractTime: string | null;
   category: string | null;
   adzunaId: string | null;
-  source: "adzuna";
+  source: ListingSource;
 }
 
 // ── A&E firm from seed list ──────────────────────────────────────────
