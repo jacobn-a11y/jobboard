@@ -1,6 +1,14 @@
 import "dotenv/config";
+import { readFileSync } from "fs";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
 import { logger } from "./utils/logger.ts";
 import { ingestFromAdzuna } from "./ingest.ts";
+import { ingestFromGreenhouse } from "./ingest-greenhouse.ts";
+import { ingestFromLever } from "./ingest-lever.ts";
+import { deduplicateListings } from "./dedup.ts";
+import { loadATSCache, normalizeCacheKey, isCacheValid } from "./utils/ats-cache.ts";
+import { parseCSV } from "./utils/csv.ts";
 import { filterListings } from "./filter.ts";
 import { enrichCompany, lookupENRRank } from "./enrich.ts";
 import { estimateSalary } from "./salary.ts";
@@ -9,7 +17,10 @@ import { extractTools } from "./tools-extract.ts";
 import { calculateQualityScore, detectExperienceLevel } from "./quality-score.ts";
 import { generateSlug, deduplicateSlugs } from "./slug.ts";
 import { pushToWebflow, getExistingSlugs } from "./webflow.ts";
-import type { EnrichedListing, PipelineSummary } from "./utils/types.ts";
+import type { EnrichedListing, PipelineSummary, RawListing } from "./utils/types.ts";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const CSV_PATH = join(__dirname, "../../AccountsforBoard.csv");
 
 // ── CLI args ─────────────────────────────────────────────────────────
 
@@ -39,12 +50,60 @@ async function run(): Promise<void> {
   };
 
   try {
-    // ── Step 1: Ingest ───────────────────────────────────────────────
-    logger.info("=== Step 1: Ingesting from Adzuna ===");
-    const rawListings = await ingestFromAdzuna(limit);
-    summary.totalIngested = rawListings.length;
-    summary.afterDedup = rawListings.length; // Dedup happens in ingest
-    logger.info(`Ingested ${rawListings.length} unique listings`);
+    // ── Step 1: Multi-source ingest ───────────────────────────────────
+    logger.info("=== Step 1: Ingesting from all sources ===");
+
+    // 1a: Adzuna (keyword-based discovery)
+    logger.info("--- 1a: Adzuna ---");
+    const adzunaListings = await ingestFromAdzuna(limit);
+    logger.info(`Adzuna: ${adzunaListings.length} listings`);
+
+    // 1b: Greenhouse + Lever (direct ATS APIs, from CSV firm list)
+    let ghListings: RawListing[] = [];
+    let leverListings: RawListing[] = [];
+
+    const atsCache = loadATSCache();
+    const ghBoards: Array<{ boardToken: string; companyName: string }> = [];
+    const leverCompanies: Array<{ companySlug: string; companyName: string }> = [];
+
+    // Read firm list from CSV (source of truth)
+    try {
+      const csv = readFileSync(CSV_PATH, "utf-8");
+      const firms = parseCSV(csv);
+
+      for (const firm of firms) {
+        const name = firm["Account Name"];
+        if (!name) continue;
+        const key = normalizeCacheKey(name);
+        const entry = atsCache[key];
+        if (!entry || !isCacheValid(entry)) continue;
+
+        if (entry.provider === "greenhouse") {
+          ghBoards.push({ boardToken: entry.boardToken, companyName: name });
+        } else if (entry.provider === "lever") {
+          leverCompanies.push({ companySlug: entry.boardToken, companyName: name });
+        }
+      }
+    } catch {
+      logger.warn("Could not read AccountsforBoard.csv — skipping ATS ingestion");
+    }
+
+    if (ghBoards.length > 0) {
+      logger.info(`--- 1b: Greenhouse (${ghBoards.length} boards) ---`);
+      ghListings = await ingestFromGreenhouse(ghBoards);
+    }
+
+    if (leverCompanies.length > 0) {
+      logger.info(`--- 1c: Lever (${leverCompanies.length} companies) ---`);
+      leverListings = await ingestFromLever(leverCompanies);
+    }
+
+    // 1d: Cross-source dedup (prefer longer descriptions)
+    const allRaw = [...ghListings, ...leverListings, ...adzunaListings];
+    summary.totalIngested = allRaw.length;
+    const rawListings = deduplicateListings(allRaw);
+    summary.afterDedup = rawListings.length;
+    logger.info(`Total: ${allRaw.length} raw → ${rawListings.length} after dedup`);
 
     // ── Step 2: Filter ───────────────────────────────────────────────
     logger.info("=== Step 2: Filtering (role + firm match) ===");
