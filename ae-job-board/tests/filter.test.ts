@@ -141,7 +141,11 @@ describe("filterListings", () => {
     datePosted: "2025-01-01",
     salaryMin: null,
     salaryMax: null,
+    salaryIsPredicted: false,
     contractType: null,
+    contractTime: null,
+    category: null,
+    adzunaId: null,
     source: "adzuna",
     ...overrides,
   });

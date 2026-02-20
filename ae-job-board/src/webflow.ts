@@ -52,6 +52,8 @@ function toWebflowItem(listing: EnrichedListing): WebflowCMSItem {
       "enr-rank": listing.enrRank,
       "company-size": listing.firmMatch?.size ?? listing.enrichment?.employeeCount ?? "",
       "company-hq": listing.firmMatch?.hq ?? listing.enrichment?.hq ?? "",
+      "company-website": listing.companyWebsite,
+      "company-linkedin": listing.companyLinkedin,
       "role-summary": listing.roleSummary,
       "company-description": listing.companyDescription,
       "tools-mentioned": listing.toolsMentioned,
