@@ -1,0 +1,57 @@
+{
+  "resource_management": [
+    "Mosaic",
+    "Deltek",
+    "Deltek Vision",
+    "Deltek Vantagepoint",
+    "Planisware",
+    "Planifi",
+    "BST Global",
+    "Unanet",
+    "Smartsheet",
+    "Microsoft Project",
+    "MS Project",
+    "Monday.com",
+    "Wrike",
+    "Asana",
+    "Teamwork",
+    "Float",
+    "Resource Guru",
+    "Kantata",
+    "Mavenlink"
+  ],
+  "project_management": [
+    "Procore",
+    "Newforma",
+    "e-Builder",
+    "Prolog",
+    "PlanGrid",
+    "Bluebeam",
+    "Aconex",
+    "Oracle Primavera",
+    "P6",
+    "Primavera P6"
+  ],
+  "design_software": [
+    "Revit",
+    "AutoCAD",
+    "BIM",
+    "Rhino",
+    "SketchUp",
+    "ArchiCAD",
+    "Vectorworks",
+    "Grasshopper",
+    "Navisworks",
+    "Tekla",
+    "MicroStation"
+  ],
+  "business": [
+    "Salesforce",
+    "HubSpot",
+    "Power BI",
+    "Tableau",
+    "SAP",
+    "Oracle ERP",
+    "Workday"
+  ]
+}

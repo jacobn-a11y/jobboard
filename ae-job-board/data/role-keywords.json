@@ -1,0 +1,54 @@
+{
+  "titleKeywords": {
+    "projectManagement": [
+      "project manager",
+      "project director",
+      "project engineer",
+      "project coordinator",
+      "project lead",
+      "associate project manager",
+      "assistant project manager",
+      "senior project manager",
+      "design phase manager",
+      "construction phase manager"
+    ],
+    "resourceManagement": [
+      "resource manager",
+      "resource planner",
+      "resource coordinator",
+      "capacity planning",
+      "workforce planning",
+      "staffing manager",
+      "utilization manager",
+      "resource allocation"
+    ],
+    "operations": [
+      "operations manager",
+      "director of operations",
+      "studio director",
+      "office director",
+      "practice leader",
+      "coo",
+      "chief operating officer",
+      "director of project delivery",
+      "pmo director",
+      "project management office",
+      "business operations manager"
+    ]
+  },
+  "descriptionKeywords": [
+    "resource management",
+    "resource planning",
+    "capacity planning",
+    "workforce planning",
+    "utilization rate",
+    "utilization management",
+    "resource allocation",
+    "project delivery",
+    "project management office",
+    "pmo",
+    "staffing plan",
+    "bench management",
+    "backlog management"
+  ]
+}
