@@ -118,7 +118,7 @@ interface WebflowListResponse {
 
 export interface ExistingItemsIndex {
   bySourceUrl: Map<string, { id: string; slug: string }>;
-  byFingerprint: Map<string, { id: string; slug: string; sourceUrl: string }>;
+  byFingerprint: Map<string, Array<{ id: string; slug: string; sourceUrl: string }>>;
 }
 
 function normalizeForFingerprint(s: string): string {
@@ -136,7 +136,7 @@ function webflowFingerprint(company: string, title: string, location: string): s
 export async function getExistingItems(): Promise<ExistingItemsIndex> {
   const collectionId = getCollectionId();
   const bySourceUrl = new Map<string, { id: string; slug: string }>();
-  const byFingerprint = new Map<string, { id: string; slug: string; sourceUrl: string }>();
+  const byFingerprint = new Map<string, Array<{ id: string; slug: string; sourceUrl: string }>>();
   let offset = 0;
   const limit = 100;
 
@@ -159,7 +159,12 @@ export async function getExistingItems(): Promise<ExistingItemsIndex> {
       }
       if (company && title) {
         const fp = webflowFingerprint(company, title, location || "");
-        byFingerprint.set(fp, { ...entry, sourceUrl: sourceUrl || "" });
+        const existing = byFingerprint.get(fp);
+        if (existing) {
+          existing.push({ ...entry, sourceUrl: sourceUrl || "" });
+        } else {
+          byFingerprint.set(fp, [{ ...entry, sourceUrl: sourceUrl || "" }]);
+        }
       }
     }
 
@@ -321,12 +326,21 @@ export async function pushToWebflow(
 
       if (!existingItem) {
         const fp = webflowFingerprint(listing.company, listing.title, listing.location);
-        const fpMatch = byFingerprint.get(fp);
-        if (fpMatch) {
+        const fpMatches = byFingerprint.get(fp);
+        if (fpMatches && fpMatches.length === 1) {
+          // Unambiguous fingerprint match — exactly one existing item shares
+          // this company+title+location. Safe to treat as a cross-source dup.
           logger.info(
             `Fingerprint match (cross-source dedup): ${listing.title} at ${listing.company} — updating existing item instead of creating duplicate`
           );
-          existingItem = { id: fpMatch.id, slug: fpMatch.slug };
+          existingItem = { id: fpMatches[0].id, slug: fpMatches[0].slug };
+        } else if (fpMatches && fpMatches.length > 1) {
+          // Ambiguous — multiple Webflow items share this fingerprint (e.g.,
+          // same company hiring for the same role twice). Don't guess which
+          // one to update; create a new item instead.
+          logger.info(
+            `Fingerprint collision (${fpMatches.length} existing items): ${listing.title} at ${listing.company} — creating new item to avoid overwriting a different requisition`
+          );
         }
       }
 

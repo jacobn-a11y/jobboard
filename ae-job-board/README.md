@@ -244,7 +244,7 @@ Create a CMS collection in Webflow with the fields below. **The field slugs must
 The pipeline uses a two-layer dedup strategy to prevent duplicate CMS items:
 
 1. **Source URL match** — If a listing's `source-url` already exists in Webflow, the existing item is updated in place.
-2. **Fingerprint match** (fallback) — If no source URL match is found, the pipeline builds a fingerprint from `normalized(company) + normalized(title) + normalized(location)`. If a fingerprint match exists (e.g., the same job was previously ingested from a different source), the existing item is updated instead of creating a duplicate.
+2. **Fingerprint match** (fallback) — If no source URL match is found, the pipeline builds a fingerprint from `normalized(company) + normalized(title) + normalized(location)`. If **exactly one** existing Webflow item has that fingerprint, it's treated as a cross-source duplicate and updated in place. If **multiple** existing items share that fingerprint (e.g., same company has two open reqs for the same role), the match is considered ambiguous and a new item is created instead — this prevents the pipeline from accidentally overwriting a different requisition.
 
 Other behaviors:
 - **New listings** (no match by either method) are created as CMS items with `pipeline-managed = true`
@@ -293,7 +293,7 @@ The pipeline pulls jobs from **three independent sources** to maximize coverage 
 
 2. **Adzuna** (keyword search, run second): The pipeline runs keyword searches against the Adzuna API (e.g. "project manager architecture", "construction operations director"). This catches jobs from firms that don't use Greenhouse or Lever. Adzuna descriptions are truncated (~500 chars).
 
-3. **Cross-source deduplication**: All results are merged and deduplicated. A fingerprint is built from `normalized(company) + normalized(title) + normalized(location)`. When the same job appears in multiple sources, the pipeline keeps the version with the **longest description** — so Greenhouse/Lever full descriptions always win over Adzuna snippets.
+3. **Cross-source deduplication**: All results are merged and deduplicated. A fingerprint is built from `normalized(company) + normalized(title) + normalized(location)`. When the same job appears in multiple sources, the pipeline keeps the version with the **longest description** — so Greenhouse/Lever full descriptions always win over Adzuna snippets. **Multiple openings for the same role:** If the same company has multiple requisitions with an identical title and location (e.g., two "Senior PM" openings in New York from Greenhouse), the dedup preserves both — it only collapses listings across different sources, not within the same source.
 
 ---
 
