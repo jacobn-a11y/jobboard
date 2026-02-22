@@ -1,4 +1,5 @@
 import { RateLimiter } from "./utils/rate-limiter.ts";
+import { fetchWithRetry } from "./utils/fetch-with-retry.ts";
 import { logger } from "./utils/logger.ts";
 import type { RawListing } from "./utils/types.ts";
 
@@ -89,7 +90,7 @@ async function fetchPage(
   url.searchParams.set("what", query);
   url.searchParams.set("content-type", "application/json");
 
-  const response = await fetch(url.toString());
+  const response = await fetchWithRetry(url.toString());
   if (!response.ok) {
     const text = await response.text();
     throw new Error(`Adzuna API error ${response.status}: ${text}`);

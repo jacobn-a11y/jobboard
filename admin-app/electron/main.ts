@@ -7,8 +7,20 @@ import Store from "electron-store";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const store = new Store();
 
-const REPO_OWNER = "jacobn-a11y";
-const REPO_NAME = "jobboard";
+const DEFAULT_REPO_OWNER = "jacobn-a11y";
+const DEFAULT_REPO_NAME = "jobboard";
+
+function getRepoConfig(): { owner: string; name: string } {
+  return {
+    owner: (store.get("repo-owner") as string) ?? DEFAULT_REPO_OWNER,
+    name: (store.get("repo-name") as string) ?? DEFAULT_REPO_NAME,
+  };
+}
+
+function setRepoConfig(owner: string, name: string): void {
+  store.set("repo-owner", owner);
+  store.set("repo-name", name);
+}
 
 let mainWindow: BrowserWindow | null = null;
 let githubApi: GitHubAPI | null = null;
@@ -58,7 +70,8 @@ function ensureApi(): GitHubAPI {
   if (githubApi) return githubApi;
   const token = getStoredToken();
   if (!token) throw new Error("No GitHub token configured");
-  githubApi = new GitHubAPI(token, REPO_OWNER, REPO_NAME);
+  const { owner, name } = getRepoConfig();
+  githubApi = new GitHubAPI(token, owner, name);
   return githubApi;
 }
 
@@ -70,7 +83,8 @@ ipcMain.handle("has-token", () => {
 
 ipcMain.handle("setup-token", async (_event, token: string) => {
   // Validate token by making a test API call
-  const api = new GitHubAPI(token, REPO_OWNER, REPO_NAME);
+  const { owner, name } = getRepoConfig();
+  const api = new GitHubAPI(token, owner, name);
   try {
     await api.validateToken();
     storeToken(token);
@@ -120,6 +134,14 @@ ipcMain.handle("get-workflow-schedule", async () => {
 ipcMain.handle("trigger-run", async () => {
   const api = ensureApi();
   return api.triggerRun();
+});
+
+ipcMain.handle("get-repo-config", () => getRepoConfig());
+
+ipcMain.handle("set-repo-config", (_event, owner: string, name: string) => {
+  setRepoConfig(owner.trim(), name.trim());
+  githubApi = null; // invalidate cached API
+  return { success: true };
 });
 
 // ── App lifecycle ───────────────────────────────────────────────────

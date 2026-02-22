@@ -1,4 +1,5 @@
 import { RateLimiter } from "./utils/rate-limiter.ts";
+import { fetchWithRetry } from "./utils/fetch-with-retry.ts";
 import { logger } from "./utils/logger.ts";
 import type { RawListing } from "./utils/types.ts";
 
@@ -51,7 +52,7 @@ function htmlToText(html: string): string {
  */
 export async function probeGreenhouse(boardToken: string): Promise<boolean> {
   try {
-    const response = await fetch(`${GH_BASE}/${boardToken}`);
+    const response = await fetchWithRetry(`${GH_BASE}/${boardToken}`);
     return response.ok;
   } catch {
     return false;
@@ -69,7 +70,7 @@ export async function fetchGreenhouseJobs(
   await rateLimiter.acquire();
 
   const url = `${GH_BASE}/${boardToken}/jobs?content=true`;
-  const response = await fetch(url);
+  const response = await fetchWithRetry(url);
 
   if (!response.ok) {
     if (response.status === 404) return [];

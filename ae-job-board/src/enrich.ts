@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync, existsSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { RateLimiter } from "./utils/rate-limiter.ts";
+import { fetchWithRetry } from "./utils/fetch-with-retry.ts";
 import { logger } from "./utils/logger.ts";
 import type { CompanyEnrichment, ENRRanking } from "./utils/types.ts";
 
@@ -89,7 +90,7 @@ async function fetchFromPDL(
   const url = new URL(PDL_BASE);
   url.searchParams.set("name", companyName);
 
-  const response = await fetch(url.toString(), {
+  const response = await fetchWithRetry(url.toString(), {
     headers: {
       "X-Api-Key": apiKey,
       Accept: "application/json",

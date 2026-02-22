@@ -4,6 +4,7 @@ import { renderHistory } from "./views/history.js";
 import { renderLogs } from "./views/logs.js";
 import { renderIssues } from "./views/issues.js";
 import { renderSchedule } from "./views/schedule.js";
+import { renderSettings } from "./views/settings.js";
 
 declare global {
   interface Window {
@@ -25,6 +26,8 @@ declare global {
       getRunLogs(runId: number): Promise<string>;
       getWorkflowSchedule(): Promise<{ cron: string; description: string }>;
       triggerRun(): Promise<void>;
+      getRepoConfig(): Promise<{ owner: string; name: string }>;
+      setRepoConfig(owner: string, name: string): Promise<{ success: boolean }>;
     };
   }
 }
@@ -37,7 +40,7 @@ const setupBtn = document.getElementById("setup-btn")!;
 const setupError = document.getElementById("setup-error")!;
 const disconnectBtn = document.getElementById("disconnect-btn")!;
 
-type ViewName = "dashboard" | "secrets" | "history" | "logs" | "issues" | "schedule";
+type ViewName = "dashboard" | "secrets" | "history" | "logs" | "issues" | "schedule" | "settings";
 
 const views: Record<ViewName, (el: HTMLElement) => Promise<void>> = {
   dashboard: renderDashboard,
@@ -46,6 +49,7 @@ const views: Record<ViewName, (el: HTMLElement) => Promise<void>> = {
   logs: renderLogs,
   issues: renderIssues,
   schedule: renderSchedule,
+  settings: renderSettings,
 };
 
 let currentView: ViewName = "dashboard";

@@ -1,4 +1,5 @@
 import { RateLimiter } from "./utils/rate-limiter.ts";
+import { fetchWithRetry } from "./utils/fetch-with-retry.ts";
 import { logger } from "./utils/logger.ts";
 import type { RawListing } from "./utils/types.ts";
 
@@ -65,7 +66,7 @@ function htmlToText(html: string): string {
  */
 export async function probeLever(companySlug: string): Promise<boolean> {
   try {
-    const response = await fetch(`${LEVER_BASE}/${companySlug}?limit=1&mode=json`);
+    const response = await fetchWithRetry(`${LEVER_BASE}/${companySlug}?limit=1&mode=json`);
     if (!response.ok) return false;
     const data = await response.json();
     return Array.isArray(data) && data.length > 0;
@@ -90,7 +91,7 @@ export async function fetchLeverPostings(
     await rateLimiter.acquire();
 
     const url = `${LEVER_BASE}/${companySlug}?mode=json&limit=${pageSize}&skip=${skip}`;
-    const response = await fetch(url);
+    const response = await fetchWithRetry(url);
 
     if (!response.ok) {
       if (response.status === 404) break;
