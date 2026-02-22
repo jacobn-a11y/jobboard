@@ -1,0 +1,33 @@
+{
+  "name": "mosaic-job-board-admin",
+  "version": "1.0.0",
+  "description": "Desktop admin app for Mosaic Job Board pipeline management",
+  "main": "dist/electron/main.js",
+  "type": "module",
+  "scripts": {
+    "dev": "tsc && electron dist/electron/main.js",
+    "build": "tsc && electron-builder",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "electron-store": "^10.0.0"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0",
+    "typescript": "^5.6.0"
+  },
+  "build": {
+    "appId": "com.mosaicapp.jobboard-admin",
+    "productName": "Mosaic Job Board Admin",
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": "dmg"
+    },
+    "files": [
+      "dist/**/*",
+      "src/index.html",
+      "src/styles/**/*"
+    ]
+  }
+}

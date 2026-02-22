@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
+  <title>Mosaic Job Board Admin</title>
+  <link rel="stylesheet" href="styles/app.css">
+</head>
+<body>
+  <div id="app">
+    <nav id="sidebar">
+      <div class="sidebar-header">
+        <h1>Mosaic Job Board</h1>
+        <span class="subtitle">Admin</span>
+      </div>
+      <ul class="nav-links">
+        <li><a href="#" data-view="dashboard" class="active">Dashboard</a></li>
+        <li><a href="#" data-view="secrets">Secrets</a></li>
+        <li><a href="#" data-view="history">Run History</a></li>
+        <li><a href="#" data-view="logs">Logs</a></li>
+        <li><a href="#" data-view="issues">Issues</a></li>
+        <li><a href="#" data-view="schedule">Schedule</a></li>
+      </ul>
+      <div class="sidebar-footer">
+        <button id="disconnect-btn" class="btn-text">Disconnect</button>
+      </div>
+    </nav>
+    <main id="content">
+      <!-- Views rendered here by app.ts -->
+    </main>
+  </div>
+
+  <!-- Setup overlay (shown when no token) -->
+  <div id="setup-overlay" class="overlay hidden">
+    <div class="setup-card">
+      <h2>Welcome to Mosaic Job Board Admin</h2>
+      <p>Enter your GitHub Personal Access Token to get started.</p>
+      <p class="hint">Create one at github.com/settings/tokens with <code>repo</code> scope.</p>
+      <input type="password" id="token-input" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off">
+      <div id="setup-error" class="error hidden"></div>
+      <button id="setup-btn" class="btn-primary">Connect</button>
+    </div>
+  </div>
+
+  <script type="module" src="../dist/src/app.js"></script>
+</body>
+</html>

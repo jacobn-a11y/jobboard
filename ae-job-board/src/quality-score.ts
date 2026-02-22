@@ -32,6 +32,47 @@ export function detectExperienceLevel(title: string): string {
   return "";
 }
 
+// ── Pre-AI quality scoring (for deciding whether to call AI) ────────
+
+export interface PreAIScoreInput {
+  salaryMin: number | null;
+  salaryMax: number | null;
+  salaryEstimated: boolean;
+  firmMatch: AEFirm | null;
+  enrichment: CompanyEnrichment | null;
+  enrRank: number | null;
+  description: string;
+  toolsMentioned: string;
+  title: string;
+  location: string;
+}
+
+export function calculatePreAIScore(input: PreAIScoreInput): number {
+  let score = 0;
+
+  if (input.salaryMin && input.salaryMax && !input.salaryEstimated) {
+    score += 15;
+  } else if (input.salaryMin && input.salaryMax && input.salaryEstimated) {
+    score += 5;
+  }
+  if (input.firmMatch) score += 15;
+  if (input.enrichment) score += 10;
+  if (input.enrRank) score += 10;
+  if (input.description.length > 500) score += 10;
+  if (input.description.length > 1500) score += 5;
+
+  const toolCount = input.toolsMentioned
+    ? input.toolsMentioned.split(",").filter(Boolean).length
+    : 0;
+  if (toolCount >= 1) score += 5;
+  if (toolCount >= 3) score += 5;
+  if (detectExperienceLevel(input.title)) score += 5;
+  if (input.location && input.location.includes(",")) score += 5;
+
+  // Note: AI content points (roleSummary + companyDescription = 10) excluded
+  return Math.min(score, 100);
+}
+
 // ── Quality scoring ──────────────────────────────────────────────────
 
 export function calculateQualityScore(input: ScoreInput): number {

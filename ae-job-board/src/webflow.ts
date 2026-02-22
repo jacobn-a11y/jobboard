@@ -29,10 +29,17 @@ function getSiteId(): string {
 
 // ── Map enriched listing to Webflow CMS fields ──────────────────────
 
+const REFRESH_WINDOW_DAYS = 7;  // expire if not seen for 7 days
+const MAX_AGE_DAYS = 60;        // hard max from posting date
+
 function toWebflowItem(listing: EnrichedListing): WebflowCMSItem {
-  // Expiration: 45 days from posting date
+  // Smart expiration: whichever comes first —
+  //   (a) 7 days from now (refreshed each pipeline run if listing is still active)
+  //   (b) 60 days from original posting date (hard max age)
+  const refreshExpiry = new Date(Date.now() + REFRESH_WINDOW_DAYS * 24 * 60 * 60 * 1000);
   const posted = new Date(listing.datePosted);
-  const expiration = new Date(posted.getTime() + 45 * 24 * 60 * 60 * 1000);
+  const maxAgeExpiry = new Date(posted.getTime() + MAX_AGE_DAYS * 24 * 60 * 60 * 1000);
+  const expiration = refreshExpiry < maxAgeExpiry ? refreshExpiry : maxAgeExpiry;
 
   return {
     fieldData: {
@@ -107,11 +114,27 @@ interface WebflowListResponse {
   pagination: { total: number; offset: number; limit: number };
 }
 
-export async function getExistingItems(): Promise<
-  Map<string, { id: string; slug: string }>
-> {
+export interface ExistingItemsIndex {
+  bySourceUrl: Map<string, { id: string; slug: string }>;
+  byFingerprint: Map<string, { id: string; slug: string; sourceUrl: string }>;
+}
+
+function normalizeForFingerprint(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function webflowFingerprint(company: string, title: string, location: string): string {
+  return `${normalizeForFingerprint(company)}|${normalizeForFingerprint(title)}|${normalizeForFingerprint(location)}`;
+}
+
+export async function getExistingItems(): Promise<ExistingItemsIndex> {
   const collectionId = getCollectionId();
-  const map = new Map<string, { id: string; slug: string }>();
+  const bySourceUrl = new Map<string, { id: string; slug: string }>();
+  const byFingerprint = new Map<string, { id: string; slug: string; sourceUrl: string }>();
   let offset = 0;
   const limit = 100;
 
@@ -123,11 +146,18 @@ export async function getExistingItems(): Promise<
 
     for (const item of data.items) {
       const sourceUrl = item.fieldData["source-url"] as string;
+      const company = item.fieldData["company-name"] as string;
+      const title = item.fieldData["job-title"] as string;
+      const location = item.fieldData.location as string;
+
+      const entry = { id: item.id, slug: item.fieldData.slug as string };
+
       if (sourceUrl) {
-        map.set(sourceUrl, {
-          id: item.id,
-          slug: item.fieldData.slug as string,
-        });
+        bySourceUrl.set(sourceUrl, entry);
+      }
+      if (company && title) {
+        const fp = webflowFingerprint(company, title, location || "");
+        byFingerprint.set(fp, { ...entry, sourceUrl: sourceUrl || "" });
       }
     }
 
@@ -135,12 +165,12 @@ export async function getExistingItems(): Promise<
     offset += limit;
   }
 
-  return map;
+  return { bySourceUrl, byFingerprint };
 }
 
 export async function getExistingSlugs(): Promise<Set<string>> {
-  const items = await getExistingItems();
-  return new Set([...items.values()].map((i) => i.slug));
+  const { bySourceUrl } = await getExistingItems();
+  return new Set([...bySourceUrl.values()].map((i) => i.slug));
 }
 
 export async function createItem(listing: EnrichedListing): Promise<string> {
@@ -175,7 +205,6 @@ export async function updateItem(
 
 export async function expireStaleItems(): Promise<number> {
   const collectionId = getCollectionId();
-  const existing = await getExistingItems();
   let expired = 0;
 
   // We need to fetch full items to check expiration date
@@ -226,13 +255,26 @@ export async function publishSite(): Promise<void> {
 export async function pushToWebflow(
   listings: EnrichedListing[]
 ): Promise<{ created: number; updated: number; expired: number }> {
-  const existing = await getExistingItems();
+  const { bySourceUrl, byFingerprint } = await getExistingItems();
   let created = 0;
   let updated = 0;
 
   for (const listing of listings) {
     try {
-      const existingItem = existing.get(listing.sourceUrl);
+      // Check by sourceUrl first, then fall back to fingerprint match
+      let existingItem = bySourceUrl.get(listing.sourceUrl);
+
+      if (!existingItem) {
+        const fp = webflowFingerprint(listing.company, listing.title, listing.location);
+        const fpMatch = byFingerprint.get(fp);
+        if (fpMatch) {
+          logger.info(
+            `Fingerprint match (cross-source dedup): ${listing.title} at ${listing.company} — updating existing item instead of creating duplicate`
+          );
+          existingItem = { id: fpMatch.id, slug: fpMatch.slug };
+        }
+      }
+
       if (existingItem) {
         await updateItem(existingItem.id, listing);
         updated++;
