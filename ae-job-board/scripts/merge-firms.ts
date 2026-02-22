@@ -10,6 +10,7 @@
 import { readFileSync, writeFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
+import { normalizeIndustry } from "../src/utils/normalize-industry.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FIRMS_PATH = join(__dirname, "../data/ae-firms.json");
@@ -146,7 +147,7 @@ for (const row of dataRows) {
       changed = true;
     }
     if (!existingFirm.industry && industry) {
-      existingFirm.industry = industry;
+      existingFirm.industry = normalizeIndustry(industry);
       changed = true;
     }
     if (changed) updated++;
@@ -157,7 +158,7 @@ for (const row of dataRows) {
       name,
       aliases: [],
       firmType: "Architecture & Engineering",
-      industry: industry || "Architecture & Engineering",
+      industry: normalizeIndustry(industry) || "Architecture & Engineering",
       enrRank: null,
       specializations: [],
       hq,

@@ -18,6 +18,7 @@ import { calculateQualityScore, detectExperienceLevel } from "./quality-score.ts
 import { generateSlug, deduplicateSlugs } from "./slug.ts";
 import { pushToWebflow, getExistingSlugs } from "./webflow.ts";
 import { parseLocation } from "./utils/parse-location.ts";
+import { normalizeIndustry, unmatchedIndustries } from "./utils/normalize-industry.ts";
 import type { EnrichedListing, PipelineSummary, RawListing } from "./utils/types.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -221,7 +222,7 @@ async function run(): Promise<void> {
           isRemote: parsedJobLoc.isRemote,
           companyHqCity: hqCity || parsedHq?.city || "",
           companyHqState: hqState || parsedHq?.state || "",
-          industry: firmMatch?.industry ?? enrichment?.industry ?? "Architecture & Engineering",
+          industry: normalizeIndustry(firmMatch?.industry ?? enrichment?.industry ?? "Architecture & Engineering"),
           experienceLevel,
           roleCategory,
         });
@@ -297,6 +298,16 @@ async function run(): Promise<void> {
   } catch (err) {
     logger.error("Pipeline failed", err);
     summary.errors++;
+  }
+
+  // Log any industry values that couldn't be normalized
+  if (unmatchedIndustries.size > 0) {
+    logger.warn(
+      `${unmatchedIndustries.size} industry value(s) not in industry-map.json — add aliases to normalize them:`
+    );
+    for (const val of unmatchedIndustries) {
+      logger.warn(`  "${val}"`);
+    }
   }
 
   logSummary(summary);
