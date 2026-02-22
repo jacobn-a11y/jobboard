@@ -435,12 +435,22 @@ The app communicates entirely through the GitHub API — it reads `data/run-hist
 
 ### Building the admin app
 
-The admin app is built automatically by the `build-admin-app.yml` GitHub Actions workflow when a tag matching `admin-v*` is pushed:
+The admin app is built automatically by the `build-admin-app.yml` GitHub Actions workflow when a tag matching `admin-v*` is pushed. **You must do this after merging the PR to main**, because the tag needs to point to a commit that has the workflow file at the repo root:
 
-```bash
-git tag admin-v1.0.0
-git push origin admin-v1.0.0
-```
+1. **Merge** your branch into `main` (via GitHub PR or locally)
+2. **Pull** the latest main locally:
+   ```bash
+   git checkout main
+   git pull origin main
+   ```
+3. **Create** the tag:
+   ```bash
+   git tag admin-v1.0.0
+   ```
+4. **Push** the tag to GitHub:
+   ```bash
+   git push origin admin-v1.0.0
+   ```
 
 This builds the macOS `.dmg` and uploads it to the GitHub Release.
 

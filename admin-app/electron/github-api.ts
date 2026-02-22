@@ -115,11 +115,11 @@ export class GitHubAPI {
     }
 
     // Generate ephemeral keypair and perform X25519 key exchange
-    const ephemeral = await crypto.subtle.generateKey(
+    const ephemeral = (await crypto.subtle.generateKey(
       { name: "X25519" },
       true,
       ["deriveBits"]
-    );
+    )) as CryptoKeyPair;
     const sharedBits = await crypto.subtle.deriveBits(
       { name: "X25519", public: publicKey },
       ephemeral.privateKey,
