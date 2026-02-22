@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   calculateQualityScore,
+  calculatePreAIScore,
   detectExperienceLevel,
 } from "../src/quality-score.ts";
 
@@ -112,6 +113,46 @@ describe("calculateQualityScore", () => {
     expect(score).toBe(10); // 5 for 1+ tools, 5 bonus for 3+ tools
   });
 
+  it("caps score at 100", () => {
+    // Even though individual components might exceed 100
+    const score = calculateQualityScore({
+      salaryMin: 90000,
+      salaryMax: 130000,
+      salaryEstimated: false,
+      firmMatch: {
+        name: "Gensler",
+        aliases: [],
+        firmType: "Architecture",
+        industry: "Architecture & Engineering",
+        enrRank: 2,
+        specializations: [],
+        hq: "San Francisco",
+        hqState: "California",
+        hqCity: "San Francisco",
+        size: "5000+",
+        website: "",
+        linkedin: "",
+      },
+      enrichment: {
+        employeeCount: "5000+",
+        industry: "Architecture",
+        hq: "San Francisco",
+        summary: "Leading design firm",
+        founded: "1965",
+        companyType: "Private",
+        fetchedAt: new Date().toISOString(),
+      },
+      enrRank: 2,
+      description: "x".repeat(2000),
+      toolsMentioned: "Revit, AutoCAD, Bluebeam",
+      title: "Senior Project Manager",
+      location: "New York, NY",
+      roleSummary: "A great role...",
+      companyDescription: "A great company...",
+    });
+    expect(score).toBeLessThanOrEqual(100);
+  });
+
   it("calculates a high score for complete listing", () => {
     const score = calculateQualityScore({
       salaryMin: 90000,
@@ -152,5 +193,80 @@ describe("calculateQualityScore", () => {
     // 15 (desc len) + 10 (tools) + 5 (exp level) + 5 (location) +
     // 5 (role summary) + 5 (company desc) = 95
     expect(score).toBe(95);
+  });
+});
+
+describe("calculatePreAIScore", () => {
+  const baseInput = {
+    salaryMin: null,
+    salaryMax: null,
+    salaryEstimated: false,
+    firmMatch: null,
+    enrichment: null,
+    enrRank: null,
+    description: "Short desc",
+    toolsMentioned: "",
+    title: "Project Manager",
+    location: "New York",
+  };
+
+  it("scores 0 for empty listing", () => {
+    expect(calculatePreAIScore(baseInput)).toBe(0);
+  });
+
+  it("excludes AI content points (max 85 without roleSummary+companyDescription)", () => {
+    const score = calculatePreAIScore({
+      salaryMin: 90000,
+      salaryMax: 130000,
+      salaryEstimated: false,
+      firmMatch: {
+        name: "Gensler",
+        aliases: [],
+        firmType: "Architecture",
+        industry: "Architecture & Engineering",
+        enrRank: 2,
+        specializations: [],
+        hq: "San Francisco",
+        hqState: "California",
+        hqCity: "San Francisco",
+        size: "5000+",
+        website: "",
+        linkedin: "",
+      },
+      enrichment: {
+        employeeCount: "5000+",
+        industry: "Architecture",
+        hq: "San Francisco",
+        summary: "Leading design firm",
+        founded: "1965",
+        companyType: "Private",
+        fetchedAt: new Date().toISOString(),
+      },
+      enrRank: 2,
+      description: "x".repeat(2000),
+      toolsMentioned: "Revit, AutoCAD, Bluebeam",
+      title: "Senior Project Manager",
+      location: "New York, NY",
+    });
+    // Same as full score minus AI content (10 points)
+    expect(score).toBe(85);
+  });
+
+  it("matches full score minus AI points for a basic listing", () => {
+    const preScore = calculatePreAIScore({
+      ...baseInput,
+      salaryMin: 80000,
+      salaryMax: 120000,
+      salaryEstimated: true,
+    });
+    const fullScore = calculateQualityScore({
+      ...baseInput,
+      salaryMin: 80000,
+      salaryMax: 120000,
+      salaryEstimated: true,
+      roleSummary: "",
+      companyDescription: "",
+    });
+    expect(preScore).toBe(fullScore);
   });
 });

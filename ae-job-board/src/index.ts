@@ -12,17 +12,21 @@ import { parseCSV } from "./utils/csv.ts";
 import { filterListings } from "./filter.ts";
 import { enrichCompany, lookupENRRank } from "./enrich.ts";
 import { estimateSalary } from "./salary.ts";
-import { generateContent } from "./ai-content.ts";
+import { generateContent, aiCallsMade, aiCallsSkipped } from "./ai-content.ts";
 import { extractTools } from "./tools-extract.ts";
-import { calculateQualityScore, detectExperienceLevel } from "./quality-score.ts";
+import { calculateQualityScore, calculatePreAIScore, detectExperienceLevel } from "./quality-score.ts";
 import { generateSlug, deduplicateSlugs } from "./slug.ts";
-import { pushToWebflow, getExistingSlugs } from "./webflow.ts";
+import { pushToWebflow, getExistingItems, getExistingSlugs } from "./webflow.ts";
 import { parseLocation } from "./utils/parse-location.ts";
 import { normalizeIndustry, unmatchedIndustries } from "./utils/normalize-industry.ts";
+import { appendRunHistory } from "./utils/run-history.ts";
+import type { RunRecord } from "./utils/run-history.ts";
 import type { EnrichedListing, PipelineSummary, RawListing } from "./utils/types.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CSV_PATH = join(__dirname, "../../AccountsforBoard.csv");
+
+const PRE_AI_SCORE_THRESHOLD = 45;
 
 // ── CLI args ─────────────────────────────────────────────────────────
 
@@ -39,6 +43,7 @@ if (limit) logger.info(`Limiting to ${limit} listings`);
 // ── Main pipeline ────────────────────────────────────────────────────
 
 async function run(): Promise<void> {
+  const startTime = Date.now();
   const summary: PipelineSummary = {
     totalIngested: 0,
     afterDedup: 0,
@@ -50,6 +55,8 @@ async function run(): Promise<void> {
     skipped: 0,
     errors: 0,
   };
+
+  let enrichedListings: EnrichedListing[] = [];
 
   try {
     // ── Step 1: Multi-source ingest ───────────────────────────────────
@@ -68,15 +75,24 @@ async function run(): Promise<void> {
     const ghBoards: Array<{ boardToken: string; companyName: string }> = [];
     const leverCompanies: Array<{ companySlug: string; companyName: string }> = [];
 
-    // Read firm list from CSV (source of truth)
+    // Read firm list from CSV (source of truth), dedup by normalized name
     try {
       const csv = readFileSync(CSV_PATH, "utf-8");
       const firms = parseCSV(csv);
+      const seenFirmKeys = new Set<string>();
 
       for (const firm of firms) {
         const name = firm["Account Name"];
         if (!name) continue;
         const key = normalizeCacheKey(name);
+
+        // Skip duplicate company rows in CSV
+        if (seenFirmKeys.has(key)) {
+          logger.debug(`Skipping duplicate CSV row: "${name}" (normalized: "${key}")`);
+          continue;
+        }
+        seenFirmKeys.add(key);
+
         const entry = atsCache[key];
         if (!entry || !isCacheValid(entry)) continue;
 
@@ -119,9 +135,26 @@ async function run(): Promise<void> {
       return;
     }
 
+    // ── Step 2b: Fetch existing Webflow items (for AI skip + slug dedup) ──
+    // Do this once upfront so we can skip AI for listings already in Webflow
+    let existingSourceUrls = new Set<string>();
+    let existingSlugs = new Set<string>();
+    if (!dryRun && process.env.WEBFLOW_API_TOKEN) {
+      try {
+        logger.info("Fetching existing Webflow items for dedup...");
+        const { bySourceUrl } = await getExistingItems();
+        existingSourceUrls = new Set(bySourceUrl.keys());
+        existingSlugs = new Set([...bySourceUrl.values()].map((i) => i.slug));
+        logger.info(`Found ${existingSourceUrls.size} existing items in Webflow`);
+      } catch {
+        logger.warn("Could not fetch existing Webflow items");
+      }
+    }
+
     // ── Step 3: Enrich each listing ──────────────────────────────────
     logger.info("=== Step 3: Enriching listings ===");
-    const enrichedListings: EnrichedListing[] = [];
+    let aiSkippedLowQuality = 0;
+    let aiSkippedExisting = 0;
 
     for (let i = 0; i < filtered.length; i++) {
       const { listing, roleCategory, firmMatch } = filtered[i];
@@ -156,21 +189,56 @@ async function run(): Promise<void> {
         // 3d: Tools
         const toolsMentioned = extractTools(listing.description);
 
-        // 3e-f: AI content
-        const { roleSummary, companyDescription } = await generateContent(
-          listing.title,
-          listing.company,
-          listing.location,
-          listing.description,
-          firmMatch,
-          enrichment,
-          enrRank
-        );
-
-        // 3g: Experience level
+        // 3e: Experience level
         const experienceLevel = detectExperienceLevel(listing.title);
 
-        // 3h: Quality score
+        // 3f: Pre-AI quality score — decide whether to call AI
+        const preAIScore = calculatePreAIScore({
+          salaryMin,
+          salaryMax,
+          salaryEstimated,
+          firmMatch,
+          enrichment,
+          enrRank,
+          description: listing.description,
+          toolsMentioned,
+          title: listing.title,
+          location: listing.location,
+        });
+
+        let roleSummary = "";
+        let companyDescription = "";
+
+        const isExistingInWebflow = existingSourceUrls.has(listing.sourceUrl);
+
+        if (preAIScore < PRE_AI_SCORE_THRESHOLD) {
+          // Skip AI for low-quality listings (unlikely to reach publish threshold of 40)
+          logger.debug(
+            `${stepLabel} Skipping AI (pre-score ${preAIScore} < ${PRE_AI_SCORE_THRESHOLD}): ${listing.title}`
+          );
+          aiSkippedLowQuality++;
+        } else if (isExistingInWebflow) {
+          // Skip AI for listings already in Webflow — they already have content
+          logger.debug(
+            `${stepLabel} Skipping AI (already in Webflow): ${listing.title}`
+          );
+          aiSkippedExisting++;
+        } else {
+          // 3g: Generate AI content
+          const aiResult = await generateContent(
+            listing.title,
+            listing.company,
+            listing.location,
+            listing.description,
+            firmMatch,
+            enrichment,
+            enrRank
+          );
+          roleSummary = aiResult.roleSummary;
+          companyDescription = aiResult.companyDescription;
+        }
+
+        // 3h: Final quality score (with AI content if generated)
         const qualityScore = calculateQualityScore({
           salaryMin,
           salaryMax,
@@ -235,15 +303,19 @@ async function run(): Promise<void> {
       }
     }
 
+    logger.info(
+      `AI optimization: ${aiSkippedLowQuality} skipped (low quality), ${aiSkippedExisting} skipped (existing in Webflow), ` +
+      `${aiCallsMade} API calls made, ${aiCallsSkipped} cache hits`
+    );
+
     // ── Step 4: Generate slugs ───────────────────────────────────────
     logger.info("=== Step 4: Generating slugs ===");
     const rawSlugs = enrichedListings.map((l) =>
       generateSlug(l.title, l.company, l.location)
     );
 
-    // Check for existing slugs in Webflow (skip in dry-run or if no API key)
-    let existingSlugs = new Set<string>();
-    if (!dryRun && process.env.WEBFLOW_API_TOKEN) {
+    // Use existing slugs fetched earlier (or fetch now if not already done)
+    if (existingSlugs.size === 0 && !dryRun && process.env.WEBFLOW_API_TOKEN) {
       try {
         existingSlugs = await getExistingSlugs();
       } catch {
@@ -311,6 +383,57 @@ async function run(): Promise<void> {
   }
 
   logSummary(summary);
+
+  // ── Record run history ─────────────────────────────────────────────
+  try {
+    const durationMs = Date.now() - startTime;
+    buildAndSaveRunRecord(summary, enrichedListings, durationMs);
+    logger.info("Run history updated");
+  } catch (err) {
+    logger.warn("Failed to save run history", err);
+  }
+}
+
+function buildAndSaveRunRecord(
+  summary: PipelineSummary,
+  listings: EnrichedListing[],
+  durationMs: number
+): void {
+  // Aggregate stats from enriched listings
+  const companies = new Map<string, number>();
+  const states = new Set<string>();
+  const categories: Record<string, number> = {};
+  const industries: Record<string, number> = {};
+
+  for (const listing of listings) {
+    companies.set(listing.company, (companies.get(listing.company) ?? 0) + 1);
+    if (listing.jobState) states.add(listing.jobState);
+    categories[listing.roleCategory] = (categories[listing.roleCategory] ?? 0) + 1;
+    if (listing.industry) {
+      industries[listing.industry] = (industries[listing.industry] ?? 0) + 1;
+    }
+  }
+
+  const topCompanies = [...companies.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([name, count]) => ({ name, count }));
+
+  const record: RunRecord = {
+    timestamp: new Date().toISOString(),
+    durationMs,
+    summary,
+    uniqueCompanies: companies.size,
+    uniqueStates: [...states].sort(),
+    listingsByCategory: categories,
+    listingsByIndustry: industries,
+    unmatchedIndustries: [...unmatchedIndustries],
+    aiCallsMade,
+    aiCallsSkipped,
+    topCompanies,
+  };
+
+  appendRunHistory(record);
 }
 
 function logSummary(summary: PipelineSummary): void {

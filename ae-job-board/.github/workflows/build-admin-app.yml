@@ -1,0 +1,41 @@
+name: Build Admin App
+
+on:
+  push:
+    tags:
+      - 'admin-v*'
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: admin-app
+        run: npm ci
+
+      - name: Build TypeScript
+        working-directory: admin-app
+        run: npx tsc
+
+      - name: Build Electron app
+        working-directory: admin-app
+        run: npx electron-builder --mac
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload DMG to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: admin-app/dist/*.dmg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

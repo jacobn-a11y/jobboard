@@ -38,6 +38,13 @@ jobs:
           WEBFLOW_SITE_ID: ${{ secrets.WEBFLOW_SITE_ID }}
         run: npx tsx src/index.ts
 
+      - name: Commit run history
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add ae-job-board/data/run-history.json
+          git diff --cached --quiet || git commit -m "Update run history [skip ci]" && git push
+
       - name: Upload logs
         if: always()
         uses: actions/upload-artifact@v4
