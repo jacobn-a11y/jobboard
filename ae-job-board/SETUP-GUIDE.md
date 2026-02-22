@@ -7,7 +7,7 @@ Prepared February 2026
 
 ## What This Is
 
-An automated job board that pulls project management, resource management, and operations roles at Architecture & Engineering (A&E) firms from the Adzuna API, enriches each listing with company data, salary estimates, and AI-written summaries, then pushes everything into a Webflow CMS collection. A script runs once per day at 3 AM EST via GitHub Actions -- no manual work needed after initial setup.
+An automated job board that pulls project management, resource management, and operations roles at Architecture & Engineering (A&E) firms from **three sources** — Greenhouse, Lever, and Adzuna — deduplicates them, enriches each listing with company data, salary estimates, and AI-written summaries, then pushes everything into a Webflow CMS collection. A script runs once per day at 3 AM EST via GitHub Actions -- no manual work needed after initial setup.
 
 The board lives at **mosaicapp.com/jobs** and every listing gets its own page at `/jobs/[slug]`.
 
@@ -32,9 +32,18 @@ The board lives at **mosaicapp.com/jobs** and every listing gets its own page at
 ┌─────────────────────────────────────────────────────────┐
 │                  GitHub Actions (runs daily at 3 AM)    │
 │                                                         │
-│   Adzuna API ──► Filter ──► Enrich ──► Score ──► Push   │
-│   (job data)    (A&E only)  (salary,   (0-100)   to     │
-│                              AI, etc)            Webflow │
+│   ┌─────────────┐  ┌───────────┐  ┌──────────────┐     │
+│   │ Greenhouse  │  │   Lever   │  │    Adzuna    │     │
+│   │ (free, full │  │ (free,    │  │ (free tier,  │     │
+│   │ descriptions│  │ full desc)│  │ snippets)    │     │
+│   └──────┬──────┘  └─────┬─────┘  └──────┬───────┘     │
+│          └───────────────┼───────────────┘              │
+│                          ▼                              │
+│                   Cross-Source Dedup                     │
+│                          │                              │
+│           Filter ──► Enrich ──► Score ──► Push          │
+│          (A&E only)  (salary,   (0-100)   to            │
+│                       AI, etc)            Webflow       │
 └──────────────────────────────────────────┬──────────────┘
                                            │
                                            ▼
@@ -80,7 +89,7 @@ A CMS Collection is like a database table in Webflow. Each "item" in the collect
 
 You now have an empty Jobs collection with two default fields: **Name** and **Slug**. Don't delete these -- the automation uses them.
 
-### Now add the remaining 22 fields
+### Now add the remaining 29 fields
 
 For each field below:
 1. Click **"+ Add New Field"** in the collection settings
@@ -100,28 +109,35 @@ Create fields **in this order**. Fields #1 and #2 already exist (Name and Slug).
 | 2  | Slug                 | (already exists) | `slug`                | Auto-filled. The URL piece: `senior-project-manager-at-gensler-new-york` |
 | 3  | Job Title            | Plain Text       | `job-title`           | "Senior Project Manager" |
 | 4  | Company Name         | Plain Text       | `company-name`        | "Gensler" |
-| 5  | Location             | Plain Text       | `location`            | "New York, NY" or "Remote" |
-| 6  | Description          | Rich Text        | `description`         | Full job description. Can be several paragraphs. |
-| 7  | Source URL           | Link             | `source-url`          | Link to the original job posting on Indeed/LinkedIn/etc. This powers the "Apply" button. |
-| 8  | Date Posted          | Date/Time        | `date-posted`         | When the job was originally posted. |
-| 9  | Salary Min           | Number           | `salary-min`          | Dollar amount. e.g. 85000. Can be empty. |
-| 10 | Salary Max           | Number           | `salary-max`          | Dollar amount. e.g. 130000. Can be empty. |
-| 11 | Salary Estimated     | Switch           | `salary-estimated`    | ON = salary is an estimate from BLS data. OFF = salary was posted by the employer. Show "(Estimated)" or "(Posted)" on the page. |
-| 12 | Contract Type        | Plain Text       | `contract-type`       | "full_time", "part_time", "contract", or empty |
-| 13 | Firm Type            | Plain Text       | `firm-type`           | "Architecture", "Engineering", "Architecture & Engineering", "Landscape Architecture", etc. |
-| 14 | ENR Rank             | Number           | `enr-rank`            | The firm's ranking in the ENR Top 500 Design Firms list. Empty if not ranked. Show as "#47 on ENR Top 500". |
-| 15 | Company Size         | Plain Text       | `company-size`        | "500-1,000 employees" or "5,000+ employees" |
-| 16 | Company HQ           | Plain Text       | `company-hq`          | "San Francisco, CA" |
-| 17 | Role Summary         | Rich Text        | `role-summary`        | AI-written 100-150 word summary of the role written for job seekers. |
-| 18 | Company Description  | Rich Text        | `company-description` | AI-written 80-120 word company profile. |
-| 19 | Tools Mentioned      | Plain Text       | `tools-mentioned`     | Comma-separated software names found in the description: "Deltek, Procore, Revit, Bluebeam" |
-| 20 | Quality Score        | Number           | `quality-score`       | 0-100. Higher = more complete data. 70+ = featured. Below 40 = not published. |
-| 21 | Experience Level     | Plain Text       | `experience-level`    | "Senior", "Mid-Level", "Junior", "Director", "Entry-Level", or empty |
-| 22 | Role Category        | Plain Text       | `role-category`       | One of exactly three values: `project-management`, `resource-management`, or `operations` |
-| 23 | Is Featured          | Switch           | `is-featured`         | Automatically ON when quality score >= 70. Use for a "Featured" badge and to promote on the landing page. |
-| 24 | Expiration Date      | Date/Time        | `expiration-date`     | 45 days after posting date. Automation uses this to auto-retire old listings. |
+| 5  | Location             | Plain Text       | `location`            | Full location string: "New York, NY" or "Remote" or "Chicago, IL (Remote)" |
+| 6  | Job City             | Plain Text       | `job-city`            | Parsed city: "New York", "Chicago". Enables city-level filtering. |
+| 7  | Job State            | Plain Text       | `job-state`           | Parsed state (full name): "New York", "Illinois". Enables state-level filtering. |
+| 8  | Is Remote            | Switch           | `is-remote`           | ON if the job is remote or hybrid-remote. Use for a "Remote" badge and filtering. |
+| 9  | Description          | Rich Text        | `description`         | Full job description. Can be several paragraphs. |
+| 10 | Source URL           | Link             | `source-url`          | Link to the original job posting. This powers the "Apply" button. |
+| 11 | Date Posted          | Date/Time        | `date-posted`         | When the job was originally posted. |
+| 12 | Salary Min           | Number           | `salary-min`          | Dollar amount. e.g. 85000. Can be empty. |
+| 13 | Salary Max           | Number           | `salary-max`          | Dollar amount. e.g. 130000. Can be empty. |
+| 14 | Salary Estimated     | Switch           | `salary-estimated`    | ON = salary is an estimate from BLS data. OFF = salary was posted by the employer. Show "(Estimated)" or "(Posted)" on the page. |
+| 15 | Contract Type        | Plain Text       | `contract-type`       | "full_time", "part_time", "contract", or empty |
+| 16 | Industry             | Plain Text       | `industry`            | From the CSV: "Architecture & Engineering". Enables filtering by industry as the board expands. |
+| 17 | Firm Type            | Plain Text       | `firm-type`           | Sub-classification: "Architecture", "Engineering", "Design", "Landscape Architecture", etc. |
+| 18 | ENR Rank             | Number           | `enr-rank`            | The firm's ranking in the ENR Top 500 Design Firms list. Empty if not ranked. Show as "#47 on ENR Top 500". |
+| 19 | Company Size         | Plain Text       | `company-size`        | "500-1,000 employees" or "5,000+ employees" |
+| 20 | Company HQ           | Plain Text       | `company-hq`          | Combined HQ string: "San Francisco, California" |
+| 21 | Company HQ State     | Plain Text       | `company-hq-state`    | HQ state (full name): "California", "New York". Show which state the company is based in, separate from job location. |
+| 22 | Company Website      | Link             | `company-website`     | Firm website URL (e.g. "https://www.gensler.com") |
+| 23 | Company LinkedIn     | Link             | `company-linkedin`    | Firm LinkedIn page URL |
+| 24 | Role Summary         | Rich Text        | `role-summary`        | AI-written 100-150 word summary of the role written for job seekers. |
+| 25 | Company Description  | Rich Text        | `company-description` | AI-written 80-120 word company profile. |
+| 26 | Tools Mentioned      | Plain Text       | `tools-mentioned`     | Comma-separated software names found in the description: "Deltek, Procore, Revit, Bluebeam" |
+| 27 | Quality Score        | Number           | `quality-score`       | 0-100. Higher = more complete data. 70+ = featured. Below 40 = not published. |
+| 28 | Experience Level     | Plain Text       | `experience-level`    | "Senior", "Mid-Level", "Junior", "Director", "Entry-Level", or empty |
+| 29 | Role Category        | Plain Text       | `role-category`       | One of exactly three values: `project-management`, `resource-management`, or `operations` |
+| 30 | Is Featured          | Switch           | `is-featured`         | Automatically ON when quality score >= 70. Use for a "Featured" badge and to promote on the landing page. |
+| 31 | Expiration Date      | Date/Time        | `expiration-date`     | 45 days after posting date. Automation uses this to auto-retire old listings. |
 
-### After you've created all 24 fields:
+### After you've created all 31 fields:
 
 1. Click **"Save Collection"** (top right)
 2. **Get the Collection ID** (give this to the developer):
@@ -414,11 +430,12 @@ Each card in a collection list should show:
 
 This section is for the **developer / technical person** setting things up. All the code is already written and tested. You don't need to write any code. You need to:
 1. Install a few things on your computer
-2. Create accounts on 4 services and get API keys
+2. Create accounts on 3 services and get API keys (Greenhouse and Lever are free and need no accounts)
 3. Get 2 IDs from the Webflow designer
-4. Plug the keys in
-5. Test it
-6. Set it up to run automatically every day
+4. Run the ATS detection script (finds which firms use Greenhouse/Lever)
+5. Plug the keys in
+6. Test it
+7. Set it up to run automatically every day
 
 Total time: about 1-2 hours.
 
@@ -466,7 +483,9 @@ Git is version control software. You need it to download and manage the code.
 
 ## B1. Get Your API Keys
 
-You need accounts with 4 external services plus 2 IDs from Webflow. Create them in order:
+You need accounts with 3 external services plus 2 IDs from Webflow. Create them in order.
+
+> **Note:** Greenhouse and Lever APIs are free and require no authentication — the pipeline uses them automatically. No accounts needed for those.
 
 ### 1. Adzuna API (Job data source -- FREE, no credit card needed)
 1. Go to https://developer.adzuna.com/
@@ -479,7 +498,10 @@ You need accounts with 4 external services plus 2 IDs from Webflow. Create them 
    - `ADZUNA_APP_KEY`: ___________________________
 7. The free tier allows 250 API requests per day. The pipeline uses about 100 requests per run, so you have plenty of room.
 
-### 2. People Data Labs (Company enrichment -- FREE tier, no credit card needed)
+### 2. People Data Labs (Company enrichment -- OPTIONAL, FREE tier, no credit card needed)
+
+> **This is optional.** The pipeline works without it. PDL adds extra company data (employee count, industry, etc.) but the firm seed list and CSV already provide the most important fields. Skip this if you want to get up and running quickly — you can always add it later.
+
 1. Go to https://www.peopledatalabs.com/signup
 2. Sign up with your email (use a work email if you have one -- they approve faster)
 3. You may need to verify your email
@@ -488,6 +510,7 @@ You need accounts with 4 external services plus 2 IDs from Webflow. Create them 
 6. Write it down:
    - `PDL_API_KEY`: ___________________________
 7. Free tier gives you 100 company lookups per month. The pipeline caches results so it only looks up each company once per 30 days. This is enough to get started. If you need more, the paid plan is $99/month for 1,000 lookups.
+8. If you skip this, use the `--skip-pdl` flag when running the pipeline, or simply don't set the `PDL_API_KEY` environment variable.
 
 ### 3. Anthropic / Claude API (AI-written summaries -- ~$3-5/month, needs credit card)
 1. Go to https://console.anthropic.com/
@@ -538,19 +561,19 @@ Write them down:
 - `WEBFLOW_COLLECTION_ID`: ___________________________
 - `WEBFLOW_SITE_ID`: ___________________________
 
-### Summary: You Should Now Have These 7 Values
+### Summary: You Should Now Have These Values
 
-| # | Name | Starts with / looks like | Got it? |
-|---|------|-------------------------|---------|
-| 1 | `ADZUNA_APP_ID` | Short alphanumeric string | [ ] |
-| 2 | `ADZUNA_APP_KEY` | Longer alphanumeric string | [ ] |
-| 3 | `PDL_API_KEY` | Long string | [ ] |
-| 4 | `ANTHROPIC_API_KEY` | `sk-ant-api03-...` | [ ] |
-| 5 | `WEBFLOW_API_TOKEN` | Long hex string | [ ] |
-| 6 | `WEBFLOW_COLLECTION_ID` | `647...` (24 char hex) | [ ] |
-| 7 | `WEBFLOW_SITE_ID` | `647...` (24 char hex) | [ ] |
+| # | Name | Starts with / looks like | Required? | Got it? |
+|---|------|-------------------------|-----------|---------|
+| 1 | `ADZUNA_APP_ID` | Short alphanumeric string | Yes | [ ] |
+| 2 | `ADZUNA_APP_KEY` | Longer alphanumeric string | Yes | [ ] |
+| 3 | `PDL_API_KEY` | Long string | Optional | [ ] |
+| 4 | `ANTHROPIC_API_KEY` | `sk-ant-api03-...` | Yes | [ ] |
+| 5 | `WEBFLOW_API_TOKEN` | Long hex string | Yes | [ ] |
+| 6 | `WEBFLOW_COLLECTION_ID` | `647...` (24 char hex) | Yes | [ ] |
+| 7 | `WEBFLOW_SITE_ID` | `647...` (24 char hex) | Yes | [ ] |
 
-**Do not proceed until you have all 7.** Missing any one will cause the pipeline to fail or skip that step.
+**Do not proceed until you have at least the 6 required values.** PDL is optional — the pipeline works without it.
 
 ---
 
@@ -622,6 +645,35 @@ Save and close the file.
 
 > **Security note:** The `.env` file contains secret API keys. It's already in `.gitignore` so it won't get uploaded to GitHub. Never share this file or paste its contents anywhere public.
 
+### Step 5: Run ATS detection (one-time setup)
+
+This script probes Greenhouse and Lever to discover which of the ~6,700 firms in the CSV have job boards on those platforms. It caches results in `data/ats-cache.json` (valid for 30 days).
+
+```bash
+# Test with a small batch first
+npx tsx scripts/detect-ats.ts --limit 50
+
+# Then run the full detection (takes ~20-30 minutes for all firms)
+npx tsx scripts/detect-ats.ts
+```
+
+You'll see output like:
+```
+Loaded 6726 firms from CSV
+  ✓ Greenhouse: Gensler → gensler
+  ✓ Lever: HDR → hdr
+  ✓ Greenhouse: AECOM → aecom
+Progress: 50 probed, 12 found (8 GH, 4 Lever)
+...
+```
+
+After it completes, **commit `data/ats-cache.json`** so GitHub Actions can use it:
+```bash
+git add data/ats-cache.json
+git commit -m "Add ATS detection cache"
+git push
+```
+
 ---
 
 ## B3. Test It (Before Deploying)
@@ -651,34 +703,48 @@ You should see:
 
 ### Test 2: Dry run (no writes to Webflow)
 
-This fetches real job data from Adzuna, filters it, and shows what would be published -- but does NOT write anything to Webflow. Safe to run repeatedly.
+This fetches real job data from all three sources (Greenhouse, Lever, and Adzuna), filters it, and shows what would be published -- but does NOT write anything to Webflow. Safe to run repeatedly.
 
 ```bash
 npx tsx src/index.ts --dry-run --limit 20
 ```
 
-**What "npx tsx" means:** `npx` runs a tool without installing it globally. `tsx` runs TypeScript files. `src/index.ts` is the main pipeline script. `--dry-run` means "don't push to Webflow." `--limit 20` means "only process the first 20 listings."
+**What "npx tsx" means:** `npx` runs a tool without installing it globally. `tsx` runs TypeScript files. `src/index.ts` is the main pipeline script. `--dry-run` means "don't push to Webflow." `--limit 20` means "only process the first 20 Adzuna listings" (Greenhouse and Lever always fetch all postings).
 
 You should see output like:
 ```
 [timestamp] INFO  DRY RUN MODE — no CMS writes
 [timestamp] INFO  Limiting to 20 listings
-[timestamp] INFO  === Step 1: Ingesting from Adzuna ===
+[timestamp] INFO  === Step 1: Ingesting from all sources ===
+[timestamp] INFO  --- 1a: Adzuna ---
 [timestamp] INFO  Ingesting: "project manager architecture"
 ...
+[timestamp] INFO  Adzuna: 20 listings
+[timestamp] INFO  --- 1b: Greenhouse (45 boards) ---
+[timestamp] INFO  Greenhouse [gensler]: 12 jobs from Gensler
+...
+[timestamp] INFO  Greenhouse total: 156 listings from 45 boards
+[timestamp] INFO  --- 1c: Lever (23 companies) ---
+[timestamp] INFO  Lever [hdr]: 8 postings from HDR
+...
+[timestamp] INFO  Lever total: 67 listings from 23 companies
+[timestamp] INFO  Total: 243 raw → 218 after dedup
 [timestamp] INFO  === Step 2: Filtering (role + firm match) ===
-[timestamp] INFO  Filter: 20 → 6 listings passed both layers
+[timestamp] INFO  62 listings passed filtering
 ...
 [timestamp] INFO  === DRY RUN: Would push these listings ===
 [timestamp] INFO    [55] Senior Project Manager at Gensler — New York, NY
 [timestamp] INFO    [45] Operations Manager at HDR — Omaha, NE
 ...
 [timestamp] INFO  === Pipeline Summary ===
-[timestamp] INFO    Ingested:       20
-[timestamp] INFO    After filter:   6
+[timestamp] INFO    Ingested:       243
+[timestamp] INFO    After dedup:    218
+[timestamp] INFO    After filter:   62
 ```
 
-**If you see listings in the output, it's working.** The numbers in brackets `[55]` are quality scores (0-100).
+**If you see listings in the output, it's working.** The numbers in brackets `[55]` are quality scores (0-100). Note how Greenhouse and Lever pull many more listings than Adzuna because they fetch all postings from each firm's board.
+
+> **Tip:** If Greenhouse/Lever results are empty or show "0 boards", you need to run the ATS detection script first: `npx tsx scripts/detect-ats.ts`
 
 ### Common issues at this stage:
 
@@ -689,6 +755,8 @@ You should see output like:
 | `Error fetching ... 429` | Adzuna rate limit hit | You've run the pipeline too many times today. Wait until tomorrow (resets at midnight UTC). |
 | `Filter: 20 → 0 listings passed` | No A&E firms in this batch of results | Try without `--limit` to search more broadly: `npx tsx src/index.ts --dry-run` |
 | Everything says "0" in the summary | Adzuna keys are probably wrong, or your internet is down | Check the log lines above the summary for error messages. |
+| Greenhouse/Lever show "0 boards" or "0 companies" | ATS cache is missing or empty | Run `npx tsx scripts/detect-ats.ts` first to detect which firms use Greenhouse/Lever. |
+| `Could not read AccountsforBoard.csv` | CSV not found | Make sure `AccountsforBoard.csv` is at the repo root (one level above `ae-job-board/`). |
 
 ### Test 3: Live test (writes to Webflow for real)
 
@@ -753,17 +821,17 @@ Now add each secret, one at a time. For each one:
 - Click **"Add secret"**
 - Repeat for the next one
 
-| # | Secret Name (type this exactly) | Value (paste your key) |
-|---|------|------|
-| 1 | `ADZUNA_APP_ID` | Your Adzuna App ID |
-| 2 | `ADZUNA_APP_KEY` | Your Adzuna App Key |
-| 3 | `PDL_API_KEY` | Your People Data Labs API key |
-| 4 | `ANTHROPIC_API_KEY` | Your Claude API key (starts with sk-ant-) |
-| 5 | `WEBFLOW_API_TOKEN` | Your Webflow API token |
-| 6 | `WEBFLOW_COLLECTION_ID` | Your Jobs collection ID from Webflow |
-| 7 | `WEBFLOW_SITE_ID` | Your Webflow site ID |
+| # | Secret Name (type this exactly) | Value (paste your key) | Required? |
+|---|------|------|------|
+| 1 | `ADZUNA_APP_ID` | Your Adzuna App ID | Yes |
+| 2 | `ADZUNA_APP_KEY` | Your Adzuna App Key | Yes |
+| 3 | `ANTHROPIC_API_KEY` | Your Claude API key (starts with sk-ant-) | Yes |
+| 4 | `WEBFLOW_API_TOKEN` | Your Webflow API token | Yes |
+| 5 | `WEBFLOW_COLLECTION_ID` | Your Jobs collection ID from Webflow | Yes |
+| 6 | `WEBFLOW_SITE_ID` | Your Webflow site ID | Yes |
+| 7 | `PDL_API_KEY` | Your People Data Labs API key | Optional |
 
-After adding all 7, you should see them listed on the page (the values are hidden -- that's normal).
+After adding the secrets, you should see them listed on the page (the values are hidden -- that's normal). The 6 required secrets must all be present. PDL is optional -- skip it if you haven't set up a PDL account.
 
 ### Step 3: Verify the workflow file exists
 
@@ -797,7 +865,7 @@ Wait 24 hours, then go back to the Actions tab. You should see a second run that
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| Run shows red X | A secret is missing or wrong | Go to Settings > Secrets and check all 7 are there |
+| Run shows red X | A secret is missing or wrong | Go to Settings > Secrets and check the 6 required secrets are there |
 | "Error: ADZUNA_APP_ID not set" in logs | You typed the secret name wrong | Delete and re-create the secret with the exact name |
 | Run succeeds but Webflow is empty | Webflow token or IDs are wrong | Double-check secrets 5, 6, and 7 |
 | "Process completed with exit code 1" | General error | Click on the failed step and read the error message. Usually it's an API key issue. |
@@ -836,7 +904,7 @@ Once both sides are set up, verify the connection works end-to-end.
 Complete these steps to launch:
 
 ### Webflow Side
-- [ ] Jobs CMS collection created with all 24 fields (slugs verified)
+- [ ] Jobs CMS collection created with all 31 fields (slugs verified)
 - [ ] Collection template page designed and published
 - [ ] `/jobs` landing page designed and published
 - [ ] JobPosting JSON-LD schema added to template head code
@@ -850,7 +918,7 @@ Complete these steps to launch:
 - [ ] All 7 API keys/IDs obtained and working
 - [ ] Local dry-run test passed
 - [ ] Local live test pushed 5-10 items to Webflow successfully
-- [ ] GitHub Actions secrets configured (7 secrets)
+- [ ] GitHub Actions secrets configured (6 required + 1 optional)
 - [ ] Manual GitHub Actions run completed successfully
 - [ ] Automatic daily run confirmed after 24 hours
 
@@ -938,8 +1006,9 @@ The automation pipeline already handles all enrichment (company data, salary est
 ## "No listings passed filtering"
 
 This means either:
-- Adzuna returned results but none matched A&E firms. **Normal for small test runs.** Try without `--limit` to search more broadly.
-- Your API keys are wrong and no data was ingested. Check the log output for errors in Step 1.
+- The sources returned results but none matched A&E role keywords or firms. **Normal for small test runs.** Try without `--limit` to search more broadly.
+- Your Adzuna API keys are wrong and no data was ingested. Check the log output for errors in Step 1.
+- Your ATS cache is empty so Greenhouse/Lever returned nothing. Run `npx tsx scripts/detect-ats.ts` first.
 
 ## Listings appear in CMS but not on the site
 
@@ -992,8 +1061,9 @@ Check that:
 - Monitor Google Search Console for indexing issues
 
 ## Monthly (30 minutes)
-- Review the firm seed list: are important firms being missed? Add them to `data/AccountsforBoard.csv` and re-run `npx tsx scripts/build-firm-list.ts`
-- Check API usage against free tier limits (Adzuna, PDL)
+- Review the firm list: are important firms being missed? Add them to `AccountsforBoard.csv` (repo root) and re-run `npx tsx scripts/detect-ats.ts` to probe for Greenhouse/Lever boards
+- Optionally run `npx tsx scripts/merge-firms.ts` to sync CSV data into the seed list
+- Check API usage against free tier limits (Adzuna: 250 req/day, PDL: 100 req/month if using it)
 - Review Webflow CMS item count (stay under 10,000)
 
 ## Quarterly
@@ -1007,8 +1077,10 @@ Check that:
 
 | Service | What It Does | Monthly Cost |
 |---------|-------------|-------------|
-| Adzuna API | Job listing data | Free (250 req/day) |
-| People Data Labs | Company enrichment | Free (100/mo) or $99/mo for 1,000 |
+| Greenhouse API | Job listings (full descriptions) | Free (public, no auth) |
+| Lever API | Job listings (full descriptions) | Free (public, no auth) |
+| Adzuna API | Job listings (keyword search) | Free (250 req/day) |
+| People Data Labs | Company enrichment (optional) | Free (100/mo) or $99/mo for 1,000 |
 | Claude API (Haiku) | AI role summaries and company descriptions | ~$3-5/mo |
 | Webflow | CMS hosting, pages, API | Included in existing plan |
 | GitHub Actions | Daily automation runs | Free (2,000 min/mo) |
@@ -1021,9 +1093,16 @@ Check that:
 | What | Where |
 |------|-------|
 | Main pipeline script | `ae-job-board/src/index.ts` |
-| A&E firm seed list (CSV) | `ae-job-board/data/AccountsforBoard.csv` |
-| A&E firm seed list (JSON, auto-generated) | `ae-job-board/data/ae-firms.json` |
-| Search queries | `ae-job-board/src/ingest.ts` (SEARCH_QUERIES array) |
+| Greenhouse ingestion | `ae-job-board/src/ingest-greenhouse.ts` |
+| Lever ingestion | `ae-job-board/src/ingest-lever.ts` |
+| Adzuna ingestion (keyword search) | `ae-job-board/src/ingest.ts` (SEARCH_QUERIES array) |
+| Cross-source deduplication | `ae-job-board/src/dedup.ts` |
+| Firm list (CSV, source of truth) | `AccountsforBoard.csv` (repo root) |
+| Firm seed list (JSON, metadata) | `ae-job-board/data/ae-firms.json` |
+| Industry description signals | `ae-job-board/data/industry-signals.json` (fallback for Adzuna matching) |
+| ATS detection cache | `ae-job-board/data/ats-cache.json` (generated by `detect-ats.ts`) |
+| ATS detection script | `ae-job-board/scripts/detect-ats.ts` |
+| CSV merge script | `ae-job-board/scripts/merge-firms.ts` |
 | Role title keywords | `ae-job-board/data/role-keywords.json` |
 | Tool/software keywords | `ae-job-board/data/tool-keywords.json` |
 | Salary data | `ae-job-board/data/bls-salaries.json` |

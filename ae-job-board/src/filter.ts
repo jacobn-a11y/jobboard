@@ -103,34 +103,36 @@ function matchRoleByDescription(description: string): boolean {
 }
 
 // ── Layer 2: Firm Match ──────────────────────────────────────────────
+//
+// Strategy A: If the company matches the seed list (from CSV), it
+//   passes unconditionally — regardless of industry. The CSV is the
+//   source of truth for "we want jobs from this company."
+//
+// Strategy B (fallback for Adzuna results not in the seed list):
+//   Check description for industry-specific signals. Currently these
+//   are A&E signals, but this can be extended when new industries are
+//   added. Firms matched this way carry no firm metadata.
 
-const AE_SIGNALS = [
-  "architecture",
-  "architectural",
-  "architect",
-  "civil engineering",
-  "structural engineering",
-  "mechanical engineering",
-  "electrical engineering",
-  "environmental engineering",
-  "mep",
-  "aec",
-  "a&e",
-  "design firm",
-  "design studio",
-  "leed",
-  "building design",
-  "construction documents",
-  "schematic design",
-  "landscape architecture",
-  "urban planning",
-  "interior design",
-  "revit",
-  "autocad",
-  "bim",
-  "rhino",
-  "sketchup",
-];
+let industrySignals: Record<string, string[]> = {};
+try {
+  industrySignals = JSON.parse(
+    readFileSync(join(__dirname, "../data/industry-signals.json"), "utf-8")
+  );
+} catch {
+  // Fall back to built-in A&E signals
+  industrySignals = {
+    "Architecture & Engineering": [
+      "architecture", "architectural", "architect",
+      "civil engineering", "structural engineering",
+      "mechanical engineering", "electrical engineering",
+      "environmental engineering", "mep", "aec", "a&e",
+      "design firm", "design studio", "leed", "building design",
+      "construction documents", "schematic design",
+      "landscape architecture", "urban planning", "interior design",
+      "revit", "autocad", "bim", "rhino", "sketchup",
+    ],
+  };
+}
 
 function matchFirm(
   companyName: string,
@@ -138,32 +140,31 @@ function matchFirm(
 ): { matched: boolean; firm: AEFirm | null } {
   const normalizedCompany = normalizeFirmName(companyName);
 
-  // Exact or fuzzy match against seed list
+  // Strategy A: Exact or fuzzy match against seed list (any industry)
   for (const entry of normalizedFirms) {
-    // Exact normalized match
     if (entry.normalized === normalizedCompany) {
       return { matched: true, firm: entry.firm };
     }
-    // Check aliases
     for (const alias of entry.aliasesNormalized) {
       if (alias === normalizedCompany) {
         return { matched: true, firm: entry.firm };
       }
     }
-    // Fuzzy match (85% threshold)
     if (similarity(entry.normalized, normalizedCompany) >= 0.85) {
       return { matched: true, firm: entry.firm };
     }
   }
 
-  // Fallback: check description for A&E industry signals (need 2+)
+  // Strategy B: Check description for industry signals (need 2+)
   const lower = description.toLowerCase();
-  let signalCount = 0;
-  for (const signal of AE_SIGNALS) {
-    if (lower.includes(signal)) {
-      signalCount++;
-      if (signalCount >= 2) {
-        return { matched: true, firm: null };
+  for (const signals of Object.values(industrySignals)) {
+    let signalCount = 0;
+    for (const signal of signals) {
+      if (lower.includes(signal)) {
+        signalCount++;
+        if (signalCount >= 2) {
+          return { matched: true, firm: null };
+        }
       }
     }
   }

@@ -19,9 +19,12 @@ interface AEFirm {
   name: string;
   aliases: string[];
   firmType: string;
+  industry: string;
   enrRank: number | null;
   specializations: string[];
   hq: string;
+  hqState: string;
+  hqCity: string;
   size: string;
   website: string;
   linkedin: string;
@@ -112,7 +115,7 @@ let added = 0;
 let skipped = 0;
 
 for (const row of dataRows) {
-  const [name, _industry, website, linkedin, _country, state, city] = row;
+  const [name, industry, website, linkedin, _country, state, city] = row;
   if (!name) continue;
 
   const key = normalize(name);
@@ -134,6 +137,18 @@ for (const row of dataRows) {
       existingFirm.hq = hq;
       changed = true;
     }
+    if (!existingFirm.hqState && state) {
+      existingFirm.hqState = state;
+      changed = true;
+    }
+    if (!existingFirm.hqCity && city) {
+      existingFirm.hqCity = city;
+      changed = true;
+    }
+    if (!existingFirm.industry && industry) {
+      existingFirm.industry = industry;
+      changed = true;
+    }
     if (changed) updated++;
     else skipped++;
   } else {
@@ -142,9 +157,12 @@ for (const row of dataRows) {
       name,
       aliases: [],
       firmType: "Architecture & Engineering",
+      industry: industry || "Architecture & Engineering",
       enrRank: null,
       specializations: [],
       hq,
+      hqState: state || "",
+      hqCity: city || "",
       size: "",
       website: website || "",
       linkedin: linkedin || "",
