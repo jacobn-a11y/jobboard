@@ -218,7 +218,20 @@ Create a CMS collection in Webflow with the fields below. **The field slugs must
 | `role-category`       | Plain Text | "project-management", "resource-management", "operations" |
 | `is-featured`         | Switch    | `true` when quality score >= 70            |
 | `expiration-date`     | Date      | Smart expiration (see "Listing Expiration" below) |
-| `pipeline-managed`    | Switch    | `true` for all items created by the pipeline. Used to distinguish pipeline items from manually-created CMS content so that expire/delete operations only touch pipeline items. |
+| `pipeline-managed`    | Switch    | **CRITICAL** — see warning below. |
+
+> **IMPORTANT — `pipeline-managed` field (Webflow Designer must read this)**
+>
+> The `pipeline-managed` field is a **Switch (boolean)** that the pipeline automatically sets to `true` on every job listing it creates. This is how the pipeline knows which CMS items it owns vs. which ones were created manually by a human in the Webflow Designer.
+>
+> **Why this matters:** The pipeline automatically expires and permanently deletes old job listings. Without this field, it would have no way to tell its items apart from yours, and it could delete pages you created by hand.
+>
+> **Rules:**
+> 1. **Create it exactly as:** Field name = `Pipeline Managed`, Slug = `pipeline-managed`, Type = `Switch`. The slug must be `pipeline-managed` — not `pipelineManaged`, not `pipeline_managed`, not anything else.
+> 2. **Never toggle it on** for items you create manually. If you create a CMS item by hand (a custom job post, a landing page, etc.), leave `pipeline-managed` off (false). This is the default for new Switch fields, so as long as you don't touch it, you're fine.
+> 3. **Never toggle it off** on pipeline-created items. If you turn it off on a pipeline item, the pipeline will lose track of it — it won't get updated, expired, or cleaned up, and it will sit in the CMS forever.
+> 4. **Don't delete this field.** If the field is missing from the collection, the pipeline will not be able to tag its items, and the expire/delete safety checks will not work correctly.
+> 5. **You don't need to display it.** This field is internal — don't bind it to anything on the page template. It's not meant for site visitors.
 
 ### Getting the Collection ID
 
@@ -255,6 +268,8 @@ Listings use a **smart expiration** system — whichever comes first:
 3. **Hard-deleted** — once the `expiration-date` is **30+ days in the past**, the item is permanently deleted from the CMS.
 
 All three stages only apply to items with `pipeline-managed = true`. Any CMS items you create manually in Webflow are left untouched.
+
+> **For the Webflow Designer:** You can safely create your own CMS items in the same collection (e.g., sponsored listings, custom pages, test entries). The pipeline will never modify, expire, or delete them — as long as you leave the `pipeline-managed` switch **off** (which is the default). If you need to manually remove a pipeline-created item, just delete it in the Designer; the pipeline will not recreate it unless the same job reappears in a future source feed.
 
 ### Quality Score and Featured Listings
 
