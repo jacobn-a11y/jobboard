@@ -452,7 +452,19 @@ The admin app is built automatically by the `build-admin-app.yml` GitHub Actions
    git push origin admin-v1.0.0
    ```
 
-This builds the macOS `.dmg` and uploads it to the GitHub Release.
+This builds the macOS `.dmg` and uploads it to the GitHub Release. The build signs and notarizes the app so users can open it without Gatekeeper blocking it.
+
+**Required GitHub secrets** (Settings → Secrets and variables → Actions): Add these for signing and notarization:
+
+| Secret | Description |
+|--------|--------------|
+| `CSC_LINK` | Base64-encoded Developer ID Application `.p12` file. Create: `base64 -i YourCert.p12 | pbcopy` |
+| `CSC_KEY_PASSWORD` | Password you set when exporting the `.p12` |
+| `APPLE_ID` | Apple Developer account email |
+| `APPLE_APP_SPECIFIC_PASSWORD` | App-specific password from [appleid.apple.com](https://appleid.apple.com) → Sign-In and Security → App-Specific Passwords |
+| `APPLE_TEAM_ID` | Team ID from [developer.apple.com/account](https://developer.apple.com/account) → Membership |
+
+To create the certificate: Keychain Access → Certificate Assistant → Request a Certificate from a CA → save CSR. At [developer.apple.com/account/resources/certificates/add](https://developer.apple.com/account/resources/certificates/add), create "Developer ID Application", upload CSR, download the `.cer`, double-click to import, then export the certificate + private key as `.p12`.
 
 #### Local build with code signing
 
@@ -471,6 +483,12 @@ To build and sign the app locally (for distribution outside the Mac App Store):
    export CSC_LINK=~/path/to/certificate.p12
    export CSC_KEY_PASSWORD=your-cert-password
    npm run build
+   ```
+   For notarization (so the app opens on other Macs without "damaged" warning), also set:
+   ```bash
+   export APPLE_ID=your-apple-id@email.com
+   export APPLE_APP_SPECIFIC_PASSWORD=your-app-specific-password
+   export APPLE_TEAM_ID=your-team-id
    ```
 
 ---
