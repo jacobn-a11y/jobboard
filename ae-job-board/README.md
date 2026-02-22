@@ -513,12 +513,12 @@ jobboard/                             # Repository root
 │   │   ├── run-history.test.ts
 │   │   ├── slug.test.ts
 │   │   └── tools-extract.test.ts
-│   ├── .github/workflows/
-│   │   ├── daily-sync.yml            # GitHub Actions daily cron + run history commit
-│   │   └── build-admin-app.yml       # Build Mac admin app on admin-v* tags
 │   ├── .env.example                  # Template for environment variables
 │   ├── package.json
 │   └── tsconfig.json
+├── .github/workflows/                # GitHub Actions (repo root — required location)
+│   ├── daily-sync.yml                # Daily cron + run history commit
+│   └── build-admin-app.yml           # Build Mac admin app on admin-v* tags
 └── admin-app/                        # Electron desktop admin app (Mac)
     ├── electron/
     │   ├── main.ts                   # Electron main process
