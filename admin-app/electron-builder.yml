@@ -2,6 +2,9 @@ appId: com.mosaicapp.jobboard-admin
 productName: Mosaic Job Board Admin
 copyright: Copyright 2024-2026 Mosaic
 
+# Disable built-in publish; workflow uses softprops/action-gh-release instead
+publish: null
+
 mac:
   category: public.app-category.developer-tools
   target: dmg
