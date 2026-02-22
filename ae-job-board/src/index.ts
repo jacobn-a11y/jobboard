@@ -52,6 +52,7 @@ async function run(): Promise<void> {
     created: 0,
     updated: 0,
     expired: 0,
+    deleted: 0,
     skipped: 0,
     errors: 0,
   };
@@ -365,6 +366,7 @@ async function run(): Promise<void> {
         summary.created = result.created;
         summary.updated = result.updated;
         summary.expired = result.expired;
+        summary.deleted = result.deleted;
       }
     }
   } catch (err) {
@@ -445,6 +447,7 @@ function logSummary(summary: PipelineSummary): void {
   logger.info(`  Created:        ${summary.created}`);
   logger.info(`  Updated:        ${summary.updated}`);
   logger.info(`  Expired:        ${summary.expired}`);
+  logger.info(`  Deleted:        ${summary.deleted}`);
   logger.info(`  Skipped:        ${summary.skipped}`);
   logger.info(`  Errors:         ${summary.errors}`);
 }

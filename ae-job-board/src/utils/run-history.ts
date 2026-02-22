@@ -19,6 +19,7 @@ export interface RunRecord {
     created: number;
     updated: number;
     expired: number;
+    deleted: number;
     skipped: number;
     errors: number;
   };

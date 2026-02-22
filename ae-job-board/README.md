@@ -218,6 +218,7 @@ Create a CMS collection in Webflow with the fields below. **The field slugs must
 | `role-category`       | Plain Text | "project-management", "resource-management", "operations" |
 | `is-featured`         | Switch    | `true` when quality score >= 70            |
 | `expiration-date`     | Date      | Smart expiration (see "Listing Expiration" below) |
+| `pipeline-managed`    | Switch    | `true` for all items created by the pipeline. Used to distinguish pipeline items from manually-created CMS content so that expire/delete operations only touch pipeline items. |
 
 ### Getting the Collection ID
 
@@ -233,19 +234,27 @@ The pipeline uses a two-layer dedup strategy to prevent duplicate CMS items:
 2. **Fingerprint match** (fallback) — If no source URL match is found, the pipeline builds a fingerprint from `normalized(company) + normalized(title) + normalized(location)`. If a fingerprint match exists (e.g., the same job was previously ingested from a different source), the existing item is updated instead of creating a duplicate.
 
 Other behaviors:
-- **New listings** (no match by either method) are created as CMS items
-- **Expired listings** (past `expiration-date`) are set to draft status (not deleted)
+- **New listings** (no match by either method) are created as CMS items with `pipeline-managed = true`
+- **Expired listings** (past `expiration-date` AND `pipeline-managed = true`) are set to draft status
+- **Hard-deleted listings** (expired 30+ days ago AND `pipeline-managed = true`) are permanently removed from the CMS
+- Manually-created CMS items (where `pipeline-managed` is not set) are **never** expired or deleted by the pipeline
 - After all writes, the site is **auto-published**
 - Rate limited to 58 requests/minute (Webflow allows 60)
 
-### Listing Expiration
+### Listing Expiration and Cleanup
 
 Listings use a **smart expiration** system — whichever comes first:
 
 - **7 days from the current pipeline run** — this window resets each time the pipeline runs and the listing is still active in its source. If a listing disappears from Greenhouse/Lever/Adzuna, it will expire within 7 days.
 - **60 days from the original posting date** — hard maximum age regardless of whether the listing is still active.
 
-This replaces the previous fixed 45-day-from-posting expiration.
+**Full lifecycle of a pipeline-managed item:**
+
+1. **Active** — listing is live on the site. Expiration date refreshed each pipeline run.
+2. **Expired → Draft** — once `expiration-date` passes, the item is set to draft status (hidden from the site but still in the CMS).
+3. **Hard-deleted** — once the `expiration-date` is **30+ days in the past**, the item is permanently deleted from the CMS.
+
+All three stages only apply to items with `pipeline-managed = true`. Any CMS items you create manually in Webflow are left untouched.
 
 ### Quality Score and Featured Listings
 
@@ -370,7 +379,7 @@ Each pipeline run records a detailed stats snapshot to `data/run-history.json`. 
 
 Each record includes:
 - Timestamp and duration
-- Pipeline summary (ingested, deduped, filtered, created, updated, expired, skipped, errors)
+- Pipeline summary (ingested, deduped, filtered, created, updated, expired, deleted, skipped, errors)
 - Unique companies and states covered
 - Listings broken down by role category and industry
 - Unmatched industry values
@@ -525,8 +534,9 @@ jobboard/                             # Repository root
 8. **Quality Score** — Final 0–100 score based on all data including AI content
 9. **Slug Generation** — SEO-friendly URL slugs, deduplicated against existing Webflow items
 10. **Quality Filter** — Only listings scoring >= 40 are published
-11. **Push to Webflow** — Create new items, update existing (source-url + fingerprint dedup), expire stale, publish site
-12. **Record Run History** — Save stats to `data/run-history.json`
+11. **Push to Webflow** — Create new items (with `pipeline-managed` flag), update existing (source-url + fingerprint dedup)
+12. **Expire & Delete** — Expire stale pipeline-managed items to draft; hard-delete pipeline-managed items expired 30+ days; publish site
+13. **Record Run History** — Save stats to `data/run-history.json`
 
 ---
 
@@ -580,5 +590,6 @@ AI costs are lower than a naive estimate because: (a) the pre-AI gate skips list
 | Duplicate listings in Webflow | Cross-source dedup runs at ingestion time (fingerprint). Webflow push also dedupes by `source-url` and fingerprint before creating new items. |
 | Unmatched industry values in logs | Add aliases to `data/industry-map.json` under the appropriate canonical industry. The admin app's Issues view also surfaces these. |
 | AI costs higher than expected | Check `ai-role-cache.json` and `ai-company-cache.json` exist in `data/`. If deleted, the cache rebuilds from scratch and makes API calls for all listings. |
-| Listings expiring too quickly | The smart expiration sets a 7-day rolling window refreshed each run. If the pipeline stops running, active listings will expire within 7 days. Resume the pipeline to refresh them. |
+| Listings expiring too quickly | The smart expiration sets a 7-day rolling window refreshed each run. If the pipeline stops running, active listings will expire within 7 days (then hard-delete after 30 more days). Resume the pipeline to refresh them. |
+| Manual CMS items being affected | The pipeline only expires/deletes items with `pipeline-managed = true`. If a manual item was accidentally affected, check whether it has `pipeline-managed` set. |
 | Admin app won't connect | Ensure the GitHub PAT has `repo` scope. Create one at github.com/settings/tokens. |

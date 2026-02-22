@@ -31,6 +31,7 @@ function getSiteId(): string {
 
 const REFRESH_WINDOW_DAYS = 7;  // expire if not seen for 7 days
 const MAX_AGE_DAYS = 60;        // hard max from posting date
+const HARD_DELETE_AFTER_DAYS = 30; // permanently delete expired items after 30 days
 
 function toWebflowItem(listing: EnrichedListing): WebflowCMSItem {
   // Smart expiration: whichever comes first —
@@ -74,6 +75,7 @@ function toWebflowItem(listing: EnrichedListing): WebflowCMSItem {
       "role-category": listing.roleCategory,
       "is-featured": listing.qualityScore >= 70,
       "expiration-date": expiration.toISOString(),
+      "pipeline-managed": true,
     },
   };
 }
@@ -207,7 +209,6 @@ export async function expireStaleItems(): Promise<number> {
   const collectionId = getCollectionId();
   let expired = 0;
 
-  // We need to fetch full items to check expiration date
   let offset = 0;
   const limit = 100;
 
@@ -218,10 +219,13 @@ export async function expireStaleItems(): Promise<number> {
     )) as WebflowListResponse;
 
     for (const item of data.items) {
+      // Only expire items created by the pipeline
+      const isPipelineManaged = item.fieldData["pipeline-managed"] as boolean;
+      if (!isPipelineManaged) continue;
+
       const expirationDate = item.fieldData["expiration-date"] as string;
       if (expirationDate && new Date(expirationDate) < new Date()) {
         try {
-          // Set to draft status instead of deleting
           await apiRequest(
             "PATCH",
             `/collections/${collectionId}/items/${item.id}`,
@@ -242,6 +246,57 @@ export async function expireStaleItems(): Promise<number> {
   return expired;
 }
 
+export async function deleteStaleItems(): Promise<number> {
+  const collectionId = getCollectionId();
+  const cutoff = new Date(Date.now() - HARD_DELETE_AFTER_DAYS * 24 * 60 * 60 * 1000);
+
+  // Collect items to delete first to avoid pagination shift during deletion
+  const toDelete: Array<{ id: string; name: string }> = [];
+  let offset = 0;
+  const limit = 100;
+
+  while (true) {
+    const data = (await apiRequest(
+      "GET",
+      `/collections/${collectionId}/items?offset=${offset}&limit=${limit}`
+    )) as WebflowListResponse;
+
+    for (const item of data.items) {
+      // Only delete items created by the pipeline
+      const isPipelineManaged = item.fieldData["pipeline-managed"] as boolean;
+      if (!isPipelineManaged) continue;
+
+      const expirationDate = item.fieldData["expiration-date"] as string;
+      if (expirationDate && new Date(expirationDate) < cutoff) {
+        toDelete.push({
+          id: item.id,
+          name: (item.fieldData.name as string) || item.id,
+        });
+      }
+    }
+
+    if (data.items.length < limit) break;
+    offset += limit;
+  }
+
+  let deleted = 0;
+  for (const item of toDelete) {
+    try {
+      await apiRequest("DELETE", `/collections/${collectionId}/items/${item.id}`);
+      logger.info(`Deleted: ${item.name} [${item.id}]`);
+      deleted++;
+    } catch (err) {
+      logger.error(`Failed to delete item ${item.id}`, err);
+    }
+  }
+
+  if (deleted > 0) {
+    logger.info(`Hard-deleted ${deleted} pipeline-managed items (expired 30+ days)`);
+  }
+
+  return deleted;
+}
+
 export async function publishSite(): Promise<void> {
   const siteId = getSiteId();
   try {
@@ -254,7 +309,7 @@ export async function publishSite(): Promise<void> {
 
 export async function pushToWebflow(
   listings: EnrichedListing[]
-): Promise<{ created: number; updated: number; expired: number }> {
+): Promise<{ created: number; updated: number; expired: number; deleted: number }> {
   const { bySourceUrl, byFingerprint } = await getExistingItems();
   let created = 0;
   let updated = 0;
@@ -290,11 +345,14 @@ export async function pushToWebflow(
     }
   }
 
-  // Expire stale items
+  // Expire stale pipeline-managed items (set to draft)
   const expired = await expireStaleItems();
+
+  // Hard-delete pipeline-managed items that expired 30+ days ago
+  const deleted = await deleteStaleItems();
 
   // Publish
   await publishSite();
 
-  return { created, updated, expired };
+  return { created, updated, expired, deleted };
 }
