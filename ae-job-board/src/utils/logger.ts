@@ -59,8 +59,9 @@ function log(level: LogLevel, message: string, data?: unknown): void {
     const date = new Date().toISOString().slice(0, 10);
     const logFile = join(LOG_DIR, `pipeline-${date}.log`);
     appendFileSync(logFile, formatted + "\n");
-  } catch {
-    // Don't fail the pipeline over logging
+  } catch (err) {
+    // Don't fail the pipeline over logging, but surface the error
+    console.error("[logger] Failed to write to log file:", err);
   }
 }
 

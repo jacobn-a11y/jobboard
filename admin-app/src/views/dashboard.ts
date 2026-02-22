@@ -12,6 +12,7 @@ interface RunRecord {
     created: number;
     updated: number;
     expired: number;
+    deleted?: number;
     skipped: number;
     errors: number;
   };
@@ -77,7 +78,8 @@ export async function renderDashboard(el: HTMLElement): Promise<void> {
         ${lastRecord ? `
           <p><strong>Created:</strong> ${lastRecord.summary.created} |
              <strong>Updated:</strong> ${lastRecord.summary.updated} |
-             <strong>Expired:</strong> ${lastRecord.summary.expired}</p>
+             <strong>Expired:</strong> ${lastRecord.summary.expired} |
+             <strong>Deleted:</strong> ${lastRecord.summary.deleted ?? 0}</p>
           <p><strong>Duration:</strong> ${Math.round(lastRecord.durationMs / 1000)}s</p>
           <p><strong>AI calls:</strong> ${lastRecord.aiCallsMade} made, ${lastRecord.aiCallsSkipped} skipped (cached)</p>
         ` : ""}

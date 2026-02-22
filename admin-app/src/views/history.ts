@@ -8,6 +8,7 @@ interface RunRecord {
     created: number;
     updated: number;
     expired: number;
+    deleted?: number;
     errors: number;
   };
   uniqueCompanies: number;
@@ -60,6 +61,7 @@ export async function renderHistory(el: HTMLElement): Promise<void> {
             <th>Created</th>
             <th>Updated</th>
             <th>Expired</th>
+            <th>Deleted</th>
             <th>Errors</th>
             <th>Companies</th>
             <th>AI Calls</th>
@@ -73,6 +75,7 @@ export async function renderHistory(el: HTMLElement): Promise<void> {
               <td>${run.summary.created}</td>
               <td>${run.summary.updated}</td>
               <td>${run.summary.expired}</td>
+              <td>${run.summary.deleted ?? 0}</td>
               <td>${run.summary.errors > 0 ? `<span style="color:var(--danger)">${run.summary.errors}</span>` : "0"}</td>
               <td>${run.uniqueCompanies}</td>
               <td>${run.aiCallsMade} / ${run.aiCallsMade + run.aiCallsSkipped}</td>

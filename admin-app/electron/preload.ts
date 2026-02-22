@@ -19,4 +19,9 @@ contextBridge.exposeInMainWorld("api", {
   getRunLogs: (runId: number) => ipcRenderer.invoke("get-run-logs", runId),
   getWorkflowSchedule: () => ipcRenderer.invoke("get-workflow-schedule"),
   triggerRun: () => ipcRenderer.invoke("trigger-run"),
+
+  // Repo config
+  getRepoConfig: () => ipcRenderer.invoke("get-repo-config"),
+  setRepoConfig: (owner: string, name: string) =>
+    ipcRenderer.invoke("set-repo-config", owner, name),
 });

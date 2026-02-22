@@ -1,4 +1,5 @@
 import { RateLimiter } from "./utils/rate-limiter.ts";
+import { fetchWithRetry } from "./utils/fetch-with-retry.ts";
 import { logger } from "./utils/logger.ts";
 import type { EnrichedListing, WebflowCMSItem } from "./utils/types.ts";
 
@@ -99,7 +100,7 @@ async function apiRequest(
     options.body = JSON.stringify(body);
   }
 
-  const response = await fetch(url, options);
+  const response = await fetchWithRetry(url, options);
   const data = await response.json();
 
   if (!response.ok) {
