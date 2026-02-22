@@ -111,7 +111,7 @@ describe("matchFirm", () => {
     expect(result).toHaveProperty("firm");
   });
 
-  it("matches via A&E industry signals in description", () => {
+  it("matches via industry signals in description", () => {
     const result = matchFirm(
       "Unknown Firm XYZ",
       "Join our architecture practice working with AutoCAD and Revit on building design projects"
@@ -119,7 +119,7 @@ describe("matchFirm", () => {
     expect(result.matched).toBe(true);
   });
 
-  it("does not match non-A&E firms with no signals", () => {
+  it("does not match firms with no industry signals", () => {
     const result = matchFirm(
       "Amazon Web Services",
       "Build cloud infrastructure using Python and Kubernetes"

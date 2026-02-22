@@ -140,7 +140,7 @@ export async function generateContent(
     company,
     location,
     description,
-    firmType: firm?.firmType ?? enrichment?.industry ?? "Architecture & Engineering",
+    firmType: firm?.firmType ?? enrichment?.industry ?? "",
     specializations: firm?.specializations?.join(", ") ?? "",
     size: firm?.size ?? enrichment?.employeeCount ?? "",
     hq: firm?.hq ?? enrichment?.hq ?? "",

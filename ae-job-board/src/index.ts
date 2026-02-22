@@ -17,6 +17,8 @@ import { extractTools } from "./tools-extract.ts";
 import { calculateQualityScore, detectExperienceLevel } from "./quality-score.ts";
 import { generateSlug, deduplicateSlugs } from "./slug.ts";
 import { pushToWebflow, getExistingSlugs } from "./webflow.ts";
+import { parseLocation } from "./utils/parse-location.ts";
+import { normalizeIndustry, unmatchedIndustries } from "./utils/normalize-industry.ts";
 import type { EnrichedListing, PipelineSummary, RawListing } from "./utils/types.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -184,6 +186,16 @@ async function run(): Promise<void> {
           companyDescription,
         });
 
+        // 3i: Parse job location into structured fields
+        const parsedJobLoc = parseLocation(listing.location);
+
+        // Company HQ: prefer seed list, then enrichment
+        const rawHq = firmMatch?.hq ?? enrichment?.hq ?? "";
+        const hqState = firmMatch?.hqState ?? "";
+        const hqCity = firmMatch?.hqCity ?? "";
+        // If seed list didn't have structured fields, parse the combined string
+        const parsedHq = (!hqState && rawHq) ? parseLocation(rawHq) : null;
+
         enrichedListings.push({
           title: listing.title,
           company: listing.company,
@@ -205,6 +217,12 @@ async function run(): Promise<void> {
           toolsMentioned,
           qualityScore,
           slug: "", // Populated in slug step
+          jobCity: parsedJobLoc.city,
+          jobState: parsedJobLoc.state,
+          isRemote: parsedJobLoc.isRemote,
+          companyHqCity: hqCity || parsedHq?.city || "",
+          companyHqState: hqState || parsedHq?.state || "",
+          industry: normalizeIndustry(firmMatch?.industry ?? enrichment?.industry ?? "Architecture & Engineering"),
           experienceLevel,
           roleCategory,
         });
@@ -280,6 +298,16 @@ async function run(): Promise<void> {
   } catch (err) {
     logger.error("Pipeline failed", err);
     summary.errors++;
+  }
+
+  // Log any industry values that couldn't be normalized
+  if (unmatchedIndustries.size > 0) {
+    logger.warn(
+      `${unmatchedIndustries.size} industry value(s) not in industry-map.json — add aliases to normalize them:`
+    );
+    for (const val of unmatchedIndustries) {
+      logger.warn(`  "${val}"`);
+    }
   }
 
   logSummary(summary);

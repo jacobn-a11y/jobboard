@@ -1,0 +1,67 @@
+{
+  "_comment": "Maps freeform CSV Industry values to canonical industry names. Case-insensitive matching. Add new entries as new industries appear in the CSV.",
+
+  "canonical": [
+    "Architecture & Engineering",
+    "Construction",
+    "Real Estate",
+    "Technology",
+    "Consulting"
+  ],
+
+  "aliases": {
+    "Architecture & Engineering": [
+      "architecture & engineering",
+      "architecture and engineering",
+      "a&e",
+      "aec",
+      "a/e",
+      "architecture",
+      "architectural",
+      "engineering",
+      "civil engineering",
+      "structural engineering",
+      "mechanical engineering",
+      "electrical engineering",
+      "environmental engineering",
+      "landscape architecture",
+      "interior design",
+      "urban planning",
+      "design",
+      "mep",
+      "mep engineering",
+      "surveying",
+      "geotechnical",
+      "geotechnical engineering"
+    ],
+    "Construction": [
+      "construction",
+      "construction management",
+      "general contractor",
+      "general contracting",
+      "building construction"
+    ],
+    "Real Estate": [
+      "real estate",
+      "real estate development",
+      "property management",
+      "commercial real estate",
+      "cre"
+    ],
+    "Technology": [
+      "technology",
+      "software",
+      "information technology",
+      "it",
+      "saas",
+      "proptech",
+      "contech",
+      "construction technology"
+    ],
+    "Consulting": [
+      "consulting",
+      "management consulting",
+      "professional services"
+    ]
+  }
+}

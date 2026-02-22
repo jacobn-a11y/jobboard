@@ -19,15 +19,18 @@ export interface RawListing {
   source: ListingSource;
 }
 
-// ── A&E firm from seed list ──────────────────────────────────────────
+// ── Firm from seed list ──────────────────────────────────────────────
 
 export interface AEFirm {
   name: string;
   aliases: string[];
   firmType: string;
+  industry: string; // CSV "Industry" column, e.g. "Architecture & Engineering"
   enrRank: number | null;
   specializations: string[];
   hq: string;
+  hqState: string; // e.g. "New York", "California"
+  hqCity: string; // e.g. "New York", "San Francisco"
   size: string;
   website: string;
   linkedin: string;
@@ -84,6 +87,18 @@ export interface EnrichedListing {
   // From slug generation
   slug: string;
 
+  // Structured location (parsed from location string)
+  jobCity: string;
+  jobState: string;
+  isRemote: boolean;
+
+  // Company HQ (structured)
+  companyHqCity: string;
+  companyHqState: string;
+
+  // Industry (from CSV, not inferred)
+  industry: string;
+
   // Metadata
   experienceLevel: string;
   roleCategory: "project-management" | "resource-management" | "operations";
@@ -112,6 +127,11 @@ export interface WebflowCMSItem {
     "company-hq": string;
     "company-website": string;
     "company-linkedin": string;
+    "company-hq-state": string;
+    industry: string;
+    "job-city": string;
+    "job-state": string;
+    "is-remote": boolean;
     "role-summary": string;
     "company-description": string;
     "tools-mentioned": string;

@@ -5,6 +5,7 @@
 import { readFileSync, writeFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
+import { normalizeIndustry } from "../src/utils/normalize-industry.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CSV_PATH = join(__dirname, "../data/AccountsforBoard.csv");
@@ -119,9 +120,12 @@ for (const row of rows) {
     name: row.accountName,
     aliases: [] as string[],
     firmType: inferFirmType(row.accountName),
+    industry: normalizeIndustry(row.industry) || "Architecture & Engineering",
     enrRank: findENRRank(row.accountName),
     specializations: [] as string[],
     hq: buildHQ(row.city, row.state, row.country),
+    hqState: row.state || "",
+    hqCity: row.city || "",
     size: "",
     website: row.website,
     linkedin: row.linkedin,
