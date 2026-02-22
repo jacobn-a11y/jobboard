@@ -2,6 +2,8 @@
   "name": "mosaic-job-board-admin",
   "version": "1.0.0",
   "description": "Desktop admin app for Mosaic Job Board pipeline management",
+  "author": "Mosaic",
+  "repository": "github:jacobn-a11y/jobboard",
   "main": "dist/electron/main.js",
   "type": "module",
   "scripts": {

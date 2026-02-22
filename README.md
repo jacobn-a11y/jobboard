@@ -454,6 +454,25 @@ The admin app is built automatically by the `build-admin-app.yml` GitHub Actions
 
 This builds the macOS `.dmg` and uploads it to the GitHub Release.
 
+#### Local build with code signing
+
+To build and sign the app locally (for distribution outside the Mac App Store):
+
+1. **Apple Developer Program** — You need a paid membership ($99/year).
+2. **Developer ID Application certificate** — In [Apple Developer](https://developer.apple.com/account/resources/certificates/list), create a "Developer ID Application" certificate. Download and install it in Keychain Access.
+3. **Build** — From `admin-app/`:
+   ```bash
+   npm run build
+   ```
+   electron-builder will auto-discover your Developer ID identity and sign the app. The signed `.dmg` will be in `admin-app/dist/`.
+
+   If you use a `.p12` certificate instead of keychain:
+   ```bash
+   export CSC_LINK=~/path/to/certificate.p12
+   export CSC_KEY_PASSWORD=your-cert-password
+   npm run build
+   ```
+
 ---
 
 ## Scripts Reference
