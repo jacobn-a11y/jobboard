@@ -1,4 +1,5 @@
 import { renderLogViewer } from "../components/log-viewer.js";
+import { esc } from "../utils/escape.js";
 
 export async function renderLogs(el: HTMLElement): Promise<void> {
   el.innerHTML = '<div class="loading">Loading recent runs...</div>';
@@ -15,8 +16,8 @@ export async function renderLogs(el: HTMLElement): Promise<void> {
       <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;">
         ${runs.slice(0, 10).map((run, i) => `
           <button class="btn-secondary run-log-btn ${i === 0 ? "active" : ""}"
-                  data-run-id="${run.id}">
-            ${new Date(run.created_at).toLocaleDateString()} — ${run.conclusion ?? run.status}
+                  data-run-id="${esc(run.id)}">
+            ${esc(new Date(run.created_at).toLocaleDateString())} — ${esc(run.conclusion ?? run.status)}
           </button>
         `).join("")}
       </div>

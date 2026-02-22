@@ -103,11 +103,15 @@ function migrateOldCache(): void {
       logger.info(`Migrated ${migrated} entries from old AI cache to role cache`);
     }
 
-    // Remove old cache file after migration
-    unlinkSync(OLD_CACHE_PATH);
-    logger.info("Removed old ai-content-cache.json after migration");
+    // Remove old cache file only after successful migration
+    try {
+      unlinkSync(OLD_CACHE_PATH);
+      logger.info("Removed old ai-content-cache.json after migration");
+    } catch {
+      logger.warn("Could not remove old ai-content-cache.json — remove manually");
+    }
   } catch {
-    // Migration is best-effort
+    // Migration is best-effort — leave old cache file intact for retry
   }
 }
 
@@ -287,43 +291,3 @@ export async function generateContent(
   }
 }
 
-export async function generateContentBatch(
-  items: Array<{
-    title: string;
-    company: string;
-    location: string;
-    description: string;
-    firm: AEFirm | null;
-    enrichment: CompanyEnrichment | null;
-    enrRank: number | null;
-  }>
-): Promise<AIContentResult[]> {
-  // Process in batches of 10
-  const BATCH_SIZE = 10;
-  const results: AIContentResult[] = [];
-
-  for (let i = 0; i < items.length; i += BATCH_SIZE) {
-    const batch = items.slice(i, i + BATCH_SIZE);
-    logger.info(
-      `AI content batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(items.length / BATCH_SIZE)}`
-    );
-
-    const batchResults = await Promise.all(
-      batch.map((item) =>
-        generateContent(
-          item.title,
-          item.company,
-          item.location,
-          item.description,
-          item.firm,
-          item.enrichment,
-          item.enrRank
-        )
-      )
-    );
-
-    results.push(...batchResults);
-  }
-
-  return results;
-}

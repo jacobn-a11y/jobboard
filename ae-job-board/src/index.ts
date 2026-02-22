@@ -34,10 +34,12 @@ const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");
 const skipPdl = args.includes("--skip-pdl");
 const limitIdx = args.indexOf("--limit");
-const limit = limitIdx >= 0 ? parseInt(args[limitIdx + 1], 10) : undefined;
+const limitRaw = limitIdx >= 0 ? parseInt(args[limitIdx + 1], 10) : undefined;
+const limit = limitRaw && !isNaN(limitRaw) && limitRaw > 0 ? limitRaw : undefined;
 
 if (dryRun) logger.info("DRY RUN MODE — no CMS writes");
 if (skipPdl) logger.info("Skipping PDL enrichment (--skip-pdl)");
+if (limitIdx >= 0 && !limit) logger.warn("Invalid --limit value, ignoring");
 if (limit) logger.info(`Limiting to ${limit} listings`);
 
 // ── Main pipeline ────────────────────────────────────────────────────

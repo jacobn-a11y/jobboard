@@ -1,3 +1,5 @@
+import { esc } from "../utils/escape.js";
+
 export async function renderSecrets(el: HTMLElement): Promise<void> {
   el.innerHTML = '<div class="loading">Loading secrets...</div>';
 
@@ -14,12 +16,12 @@ export async function renderSecrets(el: HTMLElement): Promise<void> {
     <div class="card">
       <div id="secrets-list">
         ${secrets.map((s) => `
-          <div class="secret-row" data-secret="${s.name}">
-            <span class="secret-name">${s.name}</span>
+          <div class="secret-row" data-secret="${esc(s.name)}">
+            <span class="secret-name">${esc(s.name)}</span>
             <span class="secret-status ${s.isSet ? "set" : s.required ? "missing" : "optional"}">
               ${s.isSet ? "Set" : s.required ? "Not Set" : "Optional"}
             </span>
-            <button class="btn-secondary edit-secret-btn" data-name="${s.name}">
+            <button class="btn-secondary edit-secret-btn" data-name="${esc(s.name)}">
               ${s.isSet ? "Update" : "Set"}
             </button>
           </div>

@@ -105,30 +105,13 @@ export class GitHubAPI {
       { name: "X25519" },
       false,
       []
-    ).catch(() => {
-      // Fallback: if SubtleCrypto doesn't support X25519, send as-is
-      // GitHub will reject invalid encryption, which is safer than storing plaintext
-      return null;
-    });
+    ).catch(() => null);
 
     if (!publicKey) {
-      // Use tweetnacl-style encryption via the GitHub CLI approach:
-      // For simplicity in v1, we base64-encode and let the API handle it
-      // This works with GitHub's sodium sealed box encryption
-      const encoded = btoa(String.fromCharCode(...messageBytes));
-
-      await this.request(
-        `/repos/${this.owner}/${this.repo}/actions/secrets/${name}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            encrypted_value: encoded,
-            key_id: keyData.key_id,
-          }),
-        }
+      throw new Error(
+        "Secret encryption requires X25519 support in SubtleCrypto. " +
+        "Please update Electron or use the GitHub CLI (gh secret set) to set secrets."
       );
-      return;
     }
 
     // Generate ephemeral keypair and perform X25519 key exchange
@@ -219,7 +202,7 @@ export class GitHubAPI {
   async getWorkflowSchedule(): Promise<{ cron: string; description: string }> {
     try {
       const content = (await this.request(
-        `/repos/${this.owner}/${this.repo}/contents/ae-job-board/.github/workflows/daily-sync.yml`,
+        `/repos/${this.owner}/${this.repo}/contents/.github/workflows/daily-sync.yml`,
         {
           headers: { Accept: "application/vnd.github.raw+json" },
         }

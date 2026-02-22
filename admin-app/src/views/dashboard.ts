@@ -1,4 +1,5 @@
 import { renderStatCard } from "../components/stat-card.js";
+import { esc } from "../utils/escape.js";
 
 interface RunRecord {
   timestamp: string;
@@ -57,7 +58,7 @@ export async function renderDashboard(el: HTMLElement): Promise<void> {
       <h2>Dashboard</h2>
       <span class="health-badge ${healthClass}">
         <span class="health-dot"></span>
-        ${healthText}
+        ${esc(healthText)}
       </span>
     </div>
 
@@ -71,8 +72,8 @@ export async function renderDashboard(el: HTMLElement): Promise<void> {
     <div class="card">
       <h3>Last Run</h3>
       ${lastRun ? `
-        <p><strong>Status:</strong> ${lastRun.conclusion ?? lastRun.status}</p>
-        <p><strong>Time:</strong> ${new Date(lastRun.created_at).toLocaleString()}</p>
+        <p><strong>Status:</strong> ${esc(lastRun.conclusion ?? lastRun.status)}</p>
+        <p><strong>Time:</strong> ${esc(new Date(lastRun.created_at).toLocaleString())}</p>
         ${lastRecord ? `
           <p><strong>Created:</strong> ${lastRecord.summary.created} |
              <strong>Updated:</strong> ${lastRecord.summary.updated} |
@@ -96,8 +97,8 @@ export async function renderDashboard(el: HTMLElement): Promise<void> {
         <tbody>
           ${runs.slice(0, 5).map((run) => `
             <tr>
-              <td>${new Date(run.created_at).toLocaleDateString()}</td>
-              <td>${run.conclusion ?? run.status}</td>
+              <td>${esc(new Date(run.created_at).toLocaleDateString())}</td>
+              <td>${esc(run.conclusion ?? run.status)}</td>
               <td>${run.updated_at ? Math.round((new Date(run.updated_at).getTime() - new Date(run.created_at).getTime()) / 1000) + "s" : "-"}</td>
             </tr>
           `).join("")}
