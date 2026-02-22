@@ -140,6 +140,7 @@ export interface WebflowCMSItem {
     "role-category": string;
     "is-featured": boolean;
     "expiration-date": string;
+    "pipeline-managed": boolean;
   };
 }
 
@@ -169,6 +170,7 @@ export interface PipelineSummary {
   created: number;
   updated: number;
   expired: number;
+  deleted: number;
   skipped: number;
   errors: number;
 }
