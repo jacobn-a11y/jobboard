@@ -1,4 +1,5 @@
 import { renderBarChart } from "../components/chart.js";
+import { esc } from "../utils/escape.js";
 
 interface RunRecord {
   timestamp: string;
@@ -68,7 +69,7 @@ export async function renderHistory(el: HTMLElement): Promise<void> {
         <tbody>
           ${[...history].reverse().map((run) => `
             <tr>
-              <td>${new Date(run.timestamp).toLocaleDateString()}</td>
+              <td>${esc(new Date(run.timestamp).toLocaleDateString())}</td>
               <td>${run.summary.created}</td>
               <td>${run.summary.updated}</td>
               <td>${run.summary.expired}</td>

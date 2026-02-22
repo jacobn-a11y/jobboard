@@ -231,12 +231,12 @@ export async function expireStaleItems(): Promise<number> {
       const expirationDate = item.fieldData["expiration-date"] as string;
       if (expirationDate && new Date(expirationDate) < new Date()) {
         try {
+          // Unpublish from the live site (removes from published collection)
           await apiRequest(
-            "PATCH",
-            `/collections/${collectionId}/items/${item.id}`,
-            { isDraft: true }
+            "DELETE",
+            `/collections/${collectionId}/items/${item.id}/live`
           );
-          logger.info(`Expired: ${item.fieldData.name} [${item.id}]`);
+          logger.info(`Expired (unpublished): ${item.fieldData.name} [${item.id}]`);
           expired++;
         } catch (err) {
           logger.error(`Failed to expire item ${item.id}`, err);
@@ -348,7 +348,18 @@ export async function pushToWebflow(
         await updateItem(existingItem.id, listing);
         updated++;
       } else {
-        await createItem(listing);
+        const newId = await createItem(listing);
+        const item = toWebflowItem(listing);
+        const slug = item.fieldData.slug;
+        // Update indexes so later listings in this batch can match
+        bySourceUrl.set(listing.sourceUrl, { id: newId, slug });
+        const fp = webflowFingerprint(listing.company, listing.title, listing.location);
+        const fpList = byFingerprint.get(fp);
+        if (fpList) {
+          fpList.push({ id: newId, slug, sourceUrl: listing.sourceUrl });
+        } else {
+          byFingerprint.set(fp, [{ id: newId, slug, sourceUrl: listing.sourceUrl }]);
+        }
         created++;
       }
     } catch (err) {

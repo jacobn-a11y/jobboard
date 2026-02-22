@@ -1,3 +1,5 @@
+import { esc } from "../utils/escape.js";
+
 interface RunRecord {
   timestamp: string;
   summary: {
@@ -46,7 +48,7 @@ export async function renderIssues(el: HTMLElement): Promise<void> {
         </thead>
         <tbody>
           ${[...allUnmatched].sort().map((ind) => `
-            <tr><td><code>${ind}</code></td></tr>
+            <tr><td><code>${esc(ind)}</code></td></tr>
           `).join("")}
         </tbody>
       </table>
@@ -71,7 +73,7 @@ export async function renderIssues(el: HTMLElement): Promise<void> {
         <tbody>
           ${errorRuns.map((run) => `
             <tr>
-              <td>${new Date(run.timestamp).toLocaleDateString()}</td>
+              <td>${esc(new Date(run.timestamp).toLocaleDateString())}</td>
               <td style="color: var(--danger);">${run.summary.errors}</td>
             </tr>
           `).join("")}
@@ -98,7 +100,7 @@ export async function renderIssues(el: HTMLElement): Promise<void> {
         <tbody>
           ${(lastRecord.topCompanies ?? []).map((c) => `
             <tr>
-              <td>${c.name}</td>
+              <td>${esc(c.name)}</td>
               <td>${c.count}</td>
             </tr>
           `).join("")}

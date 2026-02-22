@@ -1,3 +1,5 @@
+import { esc } from "../utils/escape.js";
+
 export async function renderSchedule(el: HTMLElement): Promise<void> {
   el.innerHTML = '<div class="loading">Loading schedule...</div>';
 
@@ -11,10 +13,10 @@ export async function renderSchedule(el: HTMLElement): Promise<void> {
     <div class="card">
       <h3>Current Schedule</h3>
       <p style="font-size: 18px; font-weight: 600; margin: 12px 0;">
-        ${schedule.description}
+        ${esc(schedule.description)}
       </p>
       <p style="color: var(--text-secondary); font-size: 13px;">
-        Cron expression: <code>${schedule.cron}</code>
+        Cron expression: <code>${esc(schedule.cron)}</code>
       </p>
     </div>
 

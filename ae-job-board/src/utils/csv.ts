@@ -4,7 +4,7 @@
  */
 export function parseCSV(raw: string): Record<string, string>[] {
   const rows: string[][] = [];
-  const lines = raw.split("\n");
+  const lines = raw.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
 
   for (const line of lines) {
     if (!line.trim()) continue;
