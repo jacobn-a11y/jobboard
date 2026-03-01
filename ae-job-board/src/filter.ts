@@ -108,7 +108,7 @@ function matchRoleByDescription(description: string): boolean {
 //   passes unconditionally — regardless of industry. The CSV is the
 //   source of truth for "we want jobs from this company."
 //
-// Strategy B (fallback for Adzuna results not in the seed list):
+// Strategy B (fallback for results not in the seed list):
 //   Check description for industry-specific signals. Currently these
 //   are A&E signals, but this can be extended when new industries are
 //   added. Firms matched this way carry no firm metadata.

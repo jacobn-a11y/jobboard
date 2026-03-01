@@ -6,7 +6,7 @@ import type { RawListing } from "./utils/types.ts";
  *
  * Builds a fingerprint from normalized company + title + location.
  * When the SAME job appears across different sources (e.g., Greenhouse and
- * Adzuna), keeps the version with the longest description.
+ * Lever), keeps the version with the longest description.
  *
  * When two listings share a fingerprint but come from the SAME source, they
  * are treated as separate requisitions (e.g., a company hiring two PMs in

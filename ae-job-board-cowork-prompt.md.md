@@ -1,6 +1,6 @@
 # A&E Job Board — Automation Backend
 
-Build a Node.js automation pipeline that ingests job listings from the Adzuna API, filters them to only include project management, resource management, and operations roles at Architecture & Engineering (A&E) firms, enriches each listing with company data and AI-generated content, and pushes the results to Webflow's CMS API. The pipeline should run as a daily cron job.
+Build a Node.js automation pipeline that ingests job listings from Greenhouse and Lever ATS APIs, filters them to only include project management, resource management, and operations roles at Architecture & Engineering (A&E) firms, enriches each listing with company data and AI-generated content, and pushes the results to Webflow's CMS API. The pipeline should run as a daily cron job.
 
 ## Project Structure
 
@@ -8,7 +8,8 @@ Build a Node.js automation pipeline that ingests job listings from the Adzuna AP
 ae-job-board/
 ├── src/
 │   ├── index.ts                 # Main orchestrator — runs the full pipeline
-│   ├── ingest.ts                # Adzuna API client — fetches raw job listings
+│   ├── ingest-greenhouse.ts     # Greenhouse ATS API client
+│   ├── ingest-lever.ts          # Lever ATS API client
 │   ├── filter.ts                # Two-layer filtering: role match + firm match
 │   ├── enrich.ts                # Company enrichment via People Data Labs
 │   ├── salary.ts                # Salary estimate lookup via BLS data
@@ -40,8 +41,6 @@ Use TypeScript. Use `tsx` for execution. Minimize dependencies — prefer native
 ## Environment Variables (.env)
 
 ```
-ADZUNA_APP_ID=
-ADZUNA_APP_KEY=
 PDL_API_KEY=                     # People Data Labs
 ANTHROPIC_API_KEY=               # For Claude Haiku summaries
 WEBFLOW_API_TOKEN=               # Webflow CMS API v2 token
@@ -51,53 +50,35 @@ WEBFLOW_SITE_ID=                 # For triggering publishes
 
 ---
 
-## 1. Ingestion (`ingest.ts`)
+## 1. Ingestion (`ingest-greenhouse.ts` + `ingest-lever.ts`)
 
-Query the Adzuna API for job listings matching A&E-relevant searches. Adzuna's API is at `https://api.adzuna.com/v1/api/jobs/us/search/{page}`.
+Fetch job listings directly from Greenhouse and Lever ATS public APIs. Use the ATS detection cache (`data/ats-cache.json`) to know which firms use which ATS, discovered by probing firms from the CSV seed list.
 
-### Search queries to run (run all, deduplicate by source URL):
+### Greenhouse (`ingest-greenhouse.ts`)
+- API: `https://boards-api.greenhouse.io/v1/boards/{boardToken}/jobs?content=true`
+- No authentication required (public API)
+- Fetch full HTML descriptions with `?content=true`
+- Convert HTML to plain text
+- Tag with `source: "greenhouse"`
 
-**Project Management roles:**
-- `project manager architecture`
-- `project manager engineering firm`
-- `project manager AEC`
-- `project director architecture`
-- `project engineer design firm`
-- `senior project manager construction`
-- `project coordinator architecture`
-
-**Resource Management roles:**
-- `resource manager architecture`
-- `resource manager engineering`
-- `resource planner AEC`
-- `capacity planning manager`
-- `workforce planning manager engineering`
-- `utilization manager`
-
-**Operations roles:**
-- `operations manager architecture firm`
-- `operations manager engineering`
-- `director of operations architecture`
-- `studio director architecture`
-- `office director engineering`
-- `PMO director construction`
+### Lever (`ingest-lever.ts`)
+- API: `https://api.lever.co/v0/postings/{companySlug}?mode=json`
+- No authentication required (public API)
+- Paginate via `skip` parameter (offset-based, 100 per page)
+- Collect description, additional, and list sections for full descriptions
+- Extract salary range, commitment type from structured data
+- Tag with `source: "lever"`
 
 ### Implementation details:
-- Paginate through results (Adzuna returns 10 per page by default, max 50 with `results_per_page` param)
-- Fetch up to 5 pages per query (250 results per query max)
-- Deduplicate by `redirect_url` (the original job posting URL)
-- Store raw results with a `source: "adzuna"` tag for future multi-source support
-- Rate limit: 250 requests per day on free tier — be efficient
-- Return an array of raw listings with these fields mapped:
-  - `title` (from Adzuna `title`)
-  - `company` (from Adzuna `company.display_name`)
-  - `location` (from Adzuna `location.display_name`)
-  - `description` (from Adzuna `description`)
-  - `sourceUrl` (from Adzuna `redirect_url`)
-  - `datePosted` (from Adzuna `created`)
-  - `salaryMin` (from Adzuna `salary_min`, nullable)
-  - `salaryMax` (from Adzuna `salary_max`, nullable)
-  - `contractType` (from Adzuna `contract_type`, nullable)
+- Self-imposed rate limit of 10 requests/sec for each API
+- Deduplicate within each source by listing ID
+- Cross-source dedup by fingerprint: `normalized(company) + normalized(title) + normalized(location)` — keep longest description
+- Return an array of raw listings with these fields:
+  - `title`, `company`, `location`, `description`, `sourceUrl`, `datePosted`
+  - `salaryMin`, `salaryMax` (nullable), `salaryIsPredicted`
+  - `contractType`, `contractTime` (nullable)
+  - `category` (nullable)
+  - `source` ("greenhouse" | "lever")
 
 ---
 
@@ -195,7 +176,7 @@ Cross-reference the company name against `enr-rankings.json` to populate ENR Ran
 
 ## 4. Salary Estimates (`salary.ts`)
 
-If the Adzuna listing doesn't include salary data (most don't), estimate it:
+If a listing doesn't include salary data, estimate it:
 
 1. Use BLS Occupational Employment and Wage Statistics (OES) data. The relevant SOC codes are:
    - 11-9021: Construction Managers
@@ -393,7 +374,7 @@ Webflow allows 60 requests per minute. Implement a rate limiter that:
 Run the full pipeline in order:
 
 ```
-1. Ingest from Adzuna (all search queries)
+1. Ingest from Greenhouse and Lever (ATS APIs via firm list)
 2. Deduplicate raw results
 3. Filter (role match + firm match)
 4. For each filtered listing:
@@ -413,8 +394,6 @@ Run the full pipeline in order:
 ```
 
 Support a `--dry-run` flag that runs steps 1–5 and logs what would be pushed to Webflow without actually calling the CMS API. This is critical for testing.
-
-Support a `--limit N` flag that only processes the first N listings (for testing).
 
 ---
 
@@ -464,7 +443,7 @@ Include:
 2. Architecture diagram (ASCII)
 3. Setup instructions (clone, install, create .env, populate firm list)
 4. How to run locally (`npx tsx src/index.ts`)
-5. How to run in dry-run mode (`npx tsx src/index.ts --dry-run --limit 50`)
+5. How to run in dry-run mode (`npx tsx src/index.ts --dry-run`)
 6. How to deploy (GitHub Actions setup)
 7. How to add new firms to the seed list
 8. How to add new search queries

@@ -25,8 +25,7 @@ const mockListings: RawListing[] = [
     contractType: null,
     contractTime: null,
     category: null,
-    adzunaId: "mock-1",
-    source: "adzuna",
+    source: "greenhouse",
   },
   {
     title: "Operations Manager",
@@ -43,8 +42,7 @@ const mockListings: RawListing[] = [
     contractType: "full_time",
     contractTime: "full_time",
     category: null,
-    adzunaId: "mock-2",
-    source: "adzuna",
+    source: "lever",
   },
   {
     title: "Marketing Director",
@@ -59,8 +57,7 @@ const mockListings: RawListing[] = [
     contractType: null,
     contractTime: null,
     category: null,
-    adzunaId: "mock-3",
-    source: "adzuna",
+    source: "greenhouse",
   },
 ];
 

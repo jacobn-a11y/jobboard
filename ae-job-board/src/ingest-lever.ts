@@ -152,7 +152,6 @@ export async function fetchLeverPostings(
       contractType,
       contractTime,
       category: posting.categories?.team ?? posting.categories?.department ?? null,
-      adzunaId: null,
       source: "lever",
     };
   });

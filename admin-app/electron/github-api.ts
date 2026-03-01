@@ -64,8 +64,6 @@ export class GitHubAPI {
   // ── Secrets ─────────────────────────────────────────────────────────
 
   private static REQUIRED_SECRETS = [
-    { name: "ADZUNA_APP_ID", required: true },
-    { name: "ADZUNA_APP_KEY", required: true },
     { name: "ANTHROPIC_API_KEY", required: true },
     { name: "WEBFLOW_API_TOKEN", required: true },
     { name: "WEBFLOW_COLLECTION_ID", required: true },

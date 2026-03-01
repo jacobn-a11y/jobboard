@@ -40,7 +40,7 @@ This system automates job listing discovery, enrichment, and publishing for arch
 
 **How it works:**
 
-1. The pipeline ingests jobs from Greenhouse, Lever, and Adzuna (covering ~6,700 A&E firms)
+1. The pipeline ingests jobs from Greenhouse and Lever (covering ~6,700 A&E firms)
 2. Listings are deduplicated across sources (keeping the longest description per job)
 3. Two-layer filtering keeps only PM, RM, and operations roles at target firms
 4. Listings are enriched with company data, salary estimates, tool extraction, and AI-generated content
@@ -63,16 +63,16 @@ No manual work is needed after initial setup — the pipeline handles everything
      │           AccountsforBoard.csv (6,700+ firms)    │
      └──────────────────────┬───────────────────────────┘
                             │
-              ┌─────────────┼─────────────────┐
-              │             │                 │
-     ┌────────▼──────┐ ┌───▼──────────┐ ┌────▼─────────┐
-     │  Greenhouse   │ │    Lever     │ │   Adzuna     │
-     │  Boards API   │ │ Postings API │ │  Search API  │
-     │  (free, full  │ │ (free, full  │ │  (free tier, │
-     │  descriptions)│ │ descriptions)│ │  snippets)   │
-     └────────┬──────┘ └───┬──────────┘ └────┬─────────┘
-              │            │                 │
-              └─────────────┼─────────────────┘
+                   ┌────────┴─────────┐
+                   │                  │
+          ┌────────▼──────┐  ┌────────▼──────────┐
+          │  Greenhouse   │  │      Lever        │
+          │  Boards API   │  │   Postings API    │
+          │  (free, full  │  │   (free, full     │
+          │  descriptions)│  │   descriptions)   │
+          └────────┬──────┘  └────────┬──────────┘
+                   │                  │
+                   └────────┬─────────┘
                             │
                      ┌──────▼───────┐
                      │ Cross-Source │  Fingerprint dedup — keeps longest
@@ -126,14 +126,7 @@ No manual work is needed after initial setup — the pipeline handles everything
 
 Set up these accounts first. Some may take a day or two for approval.
 
-### 1. Adzuna (Job Data Source)
-
-- Sign up at [developer.adzuna.com](https://developer.adzuna.com)
-- Free tier, no credit card required
-- You'll receive an `APP_ID` and `APP_KEY`
-- Free tier allows 250 requests/day (more than sufficient)
-
-### 2. Anthropic / Claude (AI Content Generation)
+### 1. Anthropic / Claude (AI Content Generation)
 
 - Sign up at [console.anthropic.com](https://console.anthropic.com)
 - Add billing (credit card required)
@@ -141,14 +134,14 @@ Set up these accounts first. Some may take a day or two for approval.
 - The pipeline uses Claude Haiku 4.5 (`claude-haiku-4-5-20251001`) for role summaries and company descriptions
 - Expected cost: ~$1–3/month (reduced by pre-AI gate + caching — see [Part I](#part-i-ai-content-generation))
 
-### 3. People Data Labs (Company Enrichment) — Optional
+### 2. People Data Labs (Company Enrichment) — Optional
 
 - Sign up at [peopledatalabs.com](https://www.peopledatalabs.com)
 - Free tier: 100 requests/month
 - Provides company metadata (size, HQ location, industry)
 - Helpful but not required — the pipeline falls back to seed list data without it
 
-### 4. Webflow (CMS & Hosting)
+### 3. Webflow (CMS & Hosting)
 
 - Your existing Webflow site at mosaicapp.com
 - Go to **Site Settings → Apps & Integrations → API Access**
@@ -157,7 +150,7 @@ Set up these accounts first. Some may take a day or two for approval.
   - **Site ID**: Found in Site Settings → General → Site ID (or in the URL when in the Designer)
   - **Collection ID**: Created in Part B below — you'll grab this after creating the Jobs collection
 
-### 5. GitHub Personal Access Token (for Admin App)
+### 4. GitHub Personal Access Token (for Admin App)
 
 - Only needed if you plan to use the desktop admin app
 - Create at github.com/settings/tokens with `repo` scope
@@ -258,7 +251,7 @@ Each listing gets a 0–100 quality score based on data completeness (salary dat
 
 Listings use a **smart expiration** system — whichever comes first:
 
-- **7 days from the current pipeline run** — this window resets each time the pipeline runs and the listing is still active in its source. If a listing disappears from Greenhouse/Lever/Adzuna, it will expire within 7 days.
+- **7 days from the current pipeline run** — this window resets each time the pipeline runs and the listing is still active in its source. If a listing disappears from Greenhouse/Lever, it will expire within 7 days.
 - **60 days from the original posting date** — hard maximum age regardless of whether the listing is still active.
 
 **Full lifecycle of a pipeline-managed item:**
@@ -598,10 +591,6 @@ cp .env.example .env
 Open `.env` and fill in your keys:
 
 ```env
-# Job Data Source (Adzuna)
-ADZUNA_APP_ID=your_app_id
-ADZUNA_APP_KEY=your_app_key
-
 # AI Content Generation (Anthropic)
 ANTHROPIC_API_KEY=your_api_key
 
@@ -616,8 +605,6 @@ PDL_API_KEY=your_pdl_key
 
 | Variable | Required | Where to Get It |
 |----------|----------|-----------------|
-| `ADZUNA_APP_ID` | Yes | [Adzuna Developer Portal](https://developer.adzuna.com/) — free account |
-| `ADZUNA_APP_KEY` | Yes | Same as above |
 | `ANTHROPIC_API_KEY` | Yes | [Anthropic Console](https://console.anthropic.com/) |
 | `WEBFLOW_API_TOKEN` | Yes | Webflow Dashboard → Site Settings → Apps & Integrations → API Access |
 | `WEBFLOW_COLLECTION_ID` | Yes | From the Webflow CMS collection URL (see [Part B](#getting-the-collection-id)) |
@@ -647,21 +634,18 @@ git commit -m "Add ATS cache"
 
 ## Part H: Data Sources & Ingestion Flow
 
-The pipeline pulls jobs from **three independent sources** to maximize coverage:
+The pipeline pulls jobs from **two independent sources** to maximize coverage:
 
 | Source | API | Auth | Cost | What It Provides |
 |--------|-----|------|------|-----------------|
 | **Greenhouse** | `boards-api.greenhouse.io` | None (public) | Free | Full HTML descriptions, department, location, apply URL |
 | **Lever** | `api.lever.co` | None (public) | Free | Full structured descriptions, salary range, commitment type, team |
-| **Adzuna** | `api.adzuna.com` | App ID + Key | Free (250 req/day) | Truncated ~500 char snippets, salary data, contract type |
 
 ### How Ingestion Works
 
-1. **Greenhouse + Lever** (ATS-based, run first): The pipeline reads `AccountsforBoard.csv` and checks `data/ats-cache.json` to see which firms have a Greenhouse board or Lever company page (detected by `scripts/detect-ats.ts`). For each match, it fetches **all current job postings** directly from that firm's board. These provide full, untruncated job descriptions.
+1. **Greenhouse + Lever** (ATS-based): The pipeline reads `AccountsforBoard.csv` and checks `data/ats-cache.json` to see which firms have a Greenhouse board or Lever company page (detected by `scripts/detect-ats.ts`). For each match, it fetches **all current job postings** directly from that firm's board. These provide full, untruncated job descriptions.
 
-2. **Adzuna** (keyword search, run second): The pipeline runs keyword searches against the Adzuna API (e.g., "project manager architecture", "construction operations director"). This catches jobs from firms that don't use Greenhouse or Lever. Adzuna descriptions are truncated (~500 chars).
-
-3. **Cross-source deduplication**: All results are merged and deduplicated. A fingerprint is built from `normalized(company) + normalized(title) + normalized(location)`. When the same job appears in multiple sources, the pipeline keeps the version with the **longest description** — so Greenhouse/Lever full descriptions always win over Adzuna snippets.
+2. **Cross-source deduplication**: All results are merged and deduplicated. A fingerprint is built from `normalized(company) + normalized(title) + normalized(location)`. When the same job appears in both sources, the pipeline keeps the version with the **longest description**.
 
 **Multiple openings for the same role:** If the same company has multiple requisitions with an identical title and location (e.g., two "Senior PM" openings in New York from Greenhouse), the dedup preserves both — it only collapses listings across different sources, not within the same source.
 
@@ -738,24 +722,23 @@ npx tsx src/index.ts --dry-run
 ```
 
 Processes the full pipeline but doesn't touch Webflow. Review the console output to verify:
-- Jobs are being found from all three sources
+- Jobs are being found from both sources
 - Filtering is keeping relevant listings (not rejecting everything)
 - AI content is generating correctly
 - Quality scores look reasonable
 
 You can combine flags to limit scope:
 ```bash
-npx tsx src/index.ts --dry-run --limit 50
 npx tsx src/index.ts --dry-run --skip-pdl
 ```
 
 ### Test 4: Live Test (Writes to Webflow)
 
 ```bash
-npx tsx src/index.ts --limit 20
+npx tsx src/index.ts
 ```
 
-Pushes a small batch to your actual Webflow CMS. After it completes:
+Pushes results to your actual Webflow CMS. After it completes:
 1. Open the Webflow Designer → CMS panel → Jobs collection
 2. Verify items appeared with all fields populated
 3. Check the live site — open a few listing pages and confirm:
@@ -784,8 +767,6 @@ Go to **GitHub → your repo → Settings → Secrets and variables → Actions*
 
 | Secret Name | Required | Value |
 |---|---|---|
-| `ADZUNA_APP_ID` | Yes | Your Adzuna app ID |
-| `ADZUNA_APP_KEY` | Yes | Your Adzuna app key |
 | `ANTHROPIC_API_KEY` | Yes | Your Claude API key |
 | `WEBFLOW_API_TOKEN` | Yes | Your Webflow API token |
 | `WEBFLOW_COLLECTION_ID` | Yes | Your Jobs collection ID |
@@ -919,7 +900,7 @@ Before announcing the job board:
 - Refresh ATS cache if needed (`npx tsx scripts/detect-ats.ts --force`)
 
 ### Quarterly
-- Assess data sources — are Greenhouse/Lever/Adzuna still covering your target firms?
+- Assess data sources — are Greenhouse/Lever still covering your target firms?
 - Update the firm CSV if needed (`AccountsforBoard.csv`)
 - Review People Data Labs free tier usage (100 req/month)
 - Evaluate SEO performance of hub pages
@@ -990,9 +971,8 @@ This overwrites `ae-firms.json` with all firms from the CSV, cross-referencing E
 |---------------|-----|
 | **Which firms are included** | Edit `AccountsforBoard.csv` and re-run `detect-ats.ts` |
 | **Greenhouse/Lever jobs** | Automatic — all jobs from detected boards are fetched |
-| **Adzuna keyword searches** | Edit the `SEARCH_QUERIES` array in `src/ingest.ts` |
 | **Role filtering (which titles/descriptions pass)** | Edit `data/role-keywords.json` |
-| **Industry signals (Adzuna fallback)** | Edit `data/industry-signals.json` — description keywords for new industries. Firms in the CSV always pass regardless. |
+| **Industry signals** | Edit `data/industry-signals.json` — description keywords for new industries. Firms in the CSV always pass regardless. |
 | **Industry normalization** | Edit `data/industry-map.json` — add aliases mapping freeform CSV values to canonical names |
 | **Tool detection** | Edit `data/tool-keywords.json` — which software tools are extracted from descriptions |
 
@@ -1000,7 +980,7 @@ This overwrites `ae-firms.json` with all firms from the CSV, cross-referencing E
 
 ## Part S: Pipeline Steps (What Happens on Each Run)
 
-1. **Ingest** — Fetch jobs from Greenhouse boards, Lever companies, and Adzuna keyword searches
+1. **Ingest** — Fetch jobs from Greenhouse boards and Lever companies
 2. **Dedup** — Remove cross-source duplicates (fingerprint by company+title+location, keep longest description)
 3. **Filter** — Keep only PM/RM/Ops roles at firms in the seed list (any industry) or matching industry signals
 4. **Fetch Webflow State** — Pull existing Webflow items upfront for AI skip optimization and slug dedup
@@ -1038,7 +1018,7 @@ This overwrites `ae-firms.json` with all firms from the CSV, cross-referencing E
 | AI costs higher than expected | Cache deleted | Verify `ai-role-cache.json` and `ai-company-cache.json` exist in `data/`. If deleted, cache rebuilds from scratch. |
 | Listings expiring too quickly | Pipeline stopped running | Smart expiration uses a 7-day rolling window refreshed each run. Resume the pipeline. |
 | Manual CMS items being affected | `pipeline-managed` set to ON | Pipeline only expires/deletes items with `pipeline-managed = true`. Check the field. |
-| Pipeline is slow | PDL or large Adzuna result set | Use `--skip-pdl` to skip PDL lookups. Use `--limit 50` to reduce Adzuna results. |
+| Pipeline is slow | Large result set or PDL lookups | Use `--skip-pdl` to skip PDL lookups. |
 | Admin app won't connect | Invalid GitHub PAT | Ensure the token has `repo` scope. Create at github.com/settings/tokens. |
 
 ---
@@ -1050,7 +1030,6 @@ This overwrites `ae-firms.json` with all firms from the CSV, cross-referencing E
 | **Main pipeline** | `npx tsx src/index.ts` | Ingest → filter → enrich → push to Webflow |
 | | `npx tsx src/index.ts --dry-run` | Preview without Webflow writes |
 | | `npx tsx src/index.ts --skip-pdl` | Skip People Data Labs enrichment |
-| | `npx tsx src/index.ts --limit N` | Limit Adzuna to N results (Greenhouse/Lever always fetch all) |
 | **ATS detection** | `npx tsx scripts/detect-ats.ts` | Probe firms for Greenhouse/Lever boards |
 | | `npx tsx scripts/detect-ats.ts --limit N` | Test with subset of N firms |
 | | `npx tsx scripts/detect-ats.ts --force` | Force-refresh entire cache (ignores 30-day TTL) |
@@ -1068,7 +1047,6 @@ jobboard/                             # Repository root
 ├── ae-job-board/                     # Pipeline application
 │   ├── src/
 │   │   ├── index.ts                  # Main pipeline entry point
-│   │   ├── ingest.ts                 # Adzuna API ingestion (keyword search)
 │   │   ├── ingest-greenhouse.ts      # Greenhouse Boards API ingestion
 │   │   ├── ingest-lever.ts           # Lever Postings API ingestion
 │   │   ├── dedup.ts                  # Cross-source deduplication
@@ -1101,7 +1079,7 @@ jobboard/                             # Repository root
 │   │   ├── bls-salaries.json         # BLS salary data for estimation
 │   │   ├── enr-rankings.json         # ENR Top 500 rankings
 │   │   ├── industry-map.json         # Industry normalization aliases
-│   │   ├── industry-signals.json     # Description keywords per industry (Adzuna fallback)
+│   │   ├── industry-signals.json     # Description keywords per industry
 │   │   ├── role-keywords.json        # Keywords for role filtering
 │   │   ├── tool-keywords.json        # Keywords for tool extraction
 │   │   ├── ai-role-cache.json        # AI role summary cache (generated at runtime)
@@ -1145,7 +1123,6 @@ jobboard/                             # Repository root
 |---------|-----------|-------------------|
 | Greenhouse API | Unlimited (public) | $0 |
 | Lever API | Unlimited (public) | $0 |
-| Adzuna API | 250 req/day | $0 |
 | People Data Labs | 100 req/month | $0 (optional) |
 | Claude Haiku 4.5 | ~400 tokens × 2 × new listings | ~$1–3 (reduced by pre-AI gate + caching) |
 | Webflow CMS | 60 req/min | $0 (with existing plan) |
