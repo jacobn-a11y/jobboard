@@ -98,7 +98,6 @@ export async function fetchGreenhouseJobs(
       contractType: null,
       contractTime: null,
       category: job.departments?.map((d) => d.name).join(", ") ?? null,
-      adzunaId: null,
       source: "greenhouse",
     };
   });

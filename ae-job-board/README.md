@@ -1,6 +1,6 @@
 # A&E Job Board — Automation Backend
 
-Automated pipeline that ingests job listings from **Greenhouse**, **Lever**, and **Adzuna**, filters them to project management, resource management, and operations roles at Architecture & Engineering firms, enriches each listing with company data and AI-generated content, and publishes to Webflow CMS. Runs daily via GitHub Actions.
+Automated pipeline that ingests job listings from **Greenhouse** and **Lever**, filters them to project management, resource management, and operations roles at Architecture & Engineering firms, enriches each listing with company data and AI-generated content, and publishes to Webflow CMS. Runs daily via GitHub Actions.
 
 > **Admin App for Mac** — A desktop monitoring app is available for checking pipeline health, managing secrets, viewing logs, and triggering manual runs. [Download the latest `.dmg` from GitHub Releases](https://github.com/jacobn-a11y/jobboard/releases).
 
@@ -13,16 +13,16 @@ Automated pipeline that ingests job listings from **Greenhouse**, **Lever**, and
      │           AccountsforBoard.csv (6,700+ firms)    │
      └──────────────────────┬───────────────────────────┘
                             │
-              ┌─────────────┼─────────────────┐
-              │             │                 │
-     ┌────────▼──────┐ ┌───▼──────────┐ ┌────▼─────────┐
-     │  Greenhouse   │ │    Lever     │ │   Adzuna     │
-     │  Boards API   │ │ Postings API │ │  Search API  │
-     │  (free, full  │ │ (free, full  │ │  (free tier, │
-     │  descriptions)│ │ descriptions)│ │  snippets)   │
-     └────────┬──────┘ └───┬──────────┘ └────┬─────────┘
-              │            │                 │
-              └─────────────┼─────────────────┘
+              ┌─────────────┴─────────────────┐
+              │                               │
+     ┌────────▼──────┐              ┌─────────▼────────┐
+     │  Greenhouse   │              │      Lever       │
+     │  Boards API   │              │  Postings API    │
+     │  (free, full  │              │  (free, full     │
+     │  descriptions)│              │  descriptions)   │
+     └────────┬──────┘              └─────────┬────────┘
+              │                               │
+              └─────────────┬─────────────────┘
                             │
                      ┌──────▼───────┐
                      │ Cross-Source │  Fingerprint dedup — keeps longest
@@ -96,8 +96,6 @@ Automated pipeline that ingests job listings from **Greenhouse**, **Lever**, and
 
 | Variable | Required | Where to Get It |
 |----------|----------|-----------------|
-| `ADZUNA_APP_ID` | Yes | [Adzuna Developer Portal](https://developer.adzuna.com/) — free account |
-| `ADZUNA_APP_KEY` | Yes | Same as above |
 | `ANTHROPIC_API_KEY` | Yes | [Anthropic Console](https://console.anthropic.com/) — for Claude Haiku 4.5 AI content |
 | `WEBFLOW_API_TOKEN` | Yes | Webflow Dashboard > Site Settings > Apps & Integrations > API Access |
 | `WEBFLOW_COLLECTION_ID` | Yes | Webflow CMS collection ID (see "Webflow CMS Setup" below) |
@@ -125,14 +123,11 @@ Make sure to commit `data/ats-cache.json` so GitHub Actions can use it.
 ### Local Execution
 
 ```bash
-# Full pipeline (all three sources → enrich → push to Webflow)
+# Full pipeline (both sources → enrich → push to Webflow)
 npx tsx src/index.ts
 
 # Dry run (no Webflow writes, prints what would be pushed)
 npx tsx src/index.ts --dry-run
-
-# Dry run with Adzuna limit (for testing)
-npx tsx src/index.ts --dry-run --limit 50
 
 # Skip PDL company enrichment (faster, uses seed list data only)
 npx tsx src/index.ts --dry-run --skip-pdl
@@ -146,7 +141,6 @@ npx tsx src/index.ts --dry-run --skip-pdl
 |------|-------------|
 | `--dry-run` | Print results without writing to Webflow CMS |
 | `--skip-pdl` | Skip People Data Labs enrichment (uses seed list data only) |
-| `--limit N` | Limit Adzuna ingestion to N results (Greenhouse/Lever always fetch all) |
 
 ### GitHub Actions (Recommended for Production)
 
@@ -156,8 +150,6 @@ The workflow at `.github/workflows/daily-sync.yml` runs daily at **3 AM EST** (8
 
 1. Go to your GitHub repo > **Settings** > **Secrets and variables** > **Actions**
 2. Add these **repository secrets**:
-   - `ADZUNA_APP_ID`
-   - `ADZUNA_APP_KEY`
    - `ANTHROPIC_API_KEY`
    - `WEBFLOW_API_TOKEN`
    - `WEBFLOW_COLLECTION_ID`
@@ -258,7 +250,7 @@ Other behaviors:
 
 Listings use a **smart expiration** system — whichever comes first:
 
-- **7 days from the current pipeline run** — this window resets each time the pipeline runs and the listing is still active in its source. If a listing disappears from Greenhouse/Lever/Adzuna, it will expire within 7 days.
+- **7 days from the current pipeline run** — this window resets each time the pipeline runs and the listing is still active in its source. If a listing disappears from Greenhouse/Lever, it will expire within 7 days.
 - **60 days from the original posting date** — hard maximum age regardless of whether the listing is still active.
 
 **Full lifecycle of a pipeline-managed item:**
@@ -279,21 +271,18 @@ Each listing gets a 0–100 quality score based on data completeness (salary dat
 
 ## Data Sources and Ingestion Flow
 
-The pipeline pulls jobs from **three independent sources** to maximize coverage of the ~6,700 A&E firms in the CSV:
+The pipeline pulls jobs from **two independent sources** to maximize coverage of the ~6,700 A&E firms in the CSV:
 
 | Source | API | Auth | Cost | What It Provides |
 |--------|-----|------|------|-----------------|
 | **Greenhouse** | `boards-api.greenhouse.io/v1/boards/{token}/jobs` | None (public) | Free | Full HTML descriptions, department, location, apply URL |
 | **Lever** | `api.lever.co/v0/postings/{company}` | None (public) | Free | Full structured descriptions, salary range, commitment type, team/department |
-| **Adzuna** | `api.adzuna.com/v1/api/jobs/{country}/search` | App ID + Key | Free tier (250 req/day) | Truncated ~500 char snippets, salary data, contract type |
 
 ### How ingestion works
 
-1. **Greenhouse + Lever** (ATS-based, run first): The pipeline reads `AccountsforBoard.csv` and checks `data/ats-cache.json` to see which firms have a Greenhouse board or Lever company page (detected by `scripts/detect-ats.ts`). For each match, it fetches **all current job postings** directly from that firm's board. These provide full, untruncated job descriptions.
+1. **Greenhouse + Lever** (ATS-based): The pipeline reads `AccountsforBoard.csv` and checks `data/ats-cache.json` to see which firms have a Greenhouse board or Lever company page (detected by `scripts/detect-ats.ts`). For each match, it fetches **all current job postings** directly from that firm's board. These provide full, untruncated job descriptions.
 
-2. **Adzuna** (keyword search, run second): The pipeline runs keyword searches against the Adzuna API (e.g. "project manager architecture", "construction operations director"). This catches jobs from firms that don't use Greenhouse or Lever. Adzuna descriptions are truncated (~500 chars).
-
-3. **Cross-source deduplication**: All results are merged and deduplicated. A fingerprint is built from `normalized(company) + normalized(title) + normalized(location)`. When the same job appears in multiple sources, the pipeline keeps the version with the **longest description** — so Greenhouse/Lever full descriptions always win over Adzuna snippets. **Multiple openings for the same role:** If the same company has multiple requisitions with an identical title and location (e.g., two "Senior PM" openings in New York from Greenhouse), the dedup preserves both — it only collapses listings across different sources, not within the same source.
+2. **Cross-source deduplication**: All results are merged and deduplicated. A fingerprint is built from `normalized(company) + normalized(title) + normalized(location)`. When the same job appears in both sources, the pipeline keeps the version with the **longest description**. **Multiple openings for the same role:** If the same company has multiple requisitions with an identical title and location (e.g., two "Senior PM" openings in New York from Greenhouse), the dedup preserves both — it only collapses listings across different sources, not within the same source.
 
 ---
 
@@ -450,7 +439,7 @@ This builds the macOS `.dmg` and uploads it to the GitHub Release.
 
 | Script | Command | What It Does |
 |--------|---------|-------------|
-| **Main pipeline** | `npx tsx src/index.ts` | Ingest → filter → enrich → push to Webflow. Flags: `--dry-run`, `--skip-pdl`, `--limit N` |
+| **Main pipeline** | `npx tsx src/index.ts` | Ingest → filter → enrich → push to Webflow. Flags: `--dry-run`, `--skip-pdl` |
 | **ATS detection** | `npx tsx scripts/detect-ats.ts` | Probe firms for Greenhouse/Lever boards. Flags: `--limit N`, `--force` |
 | **Merge firms** | `npx tsx scripts/merge-firms.ts` | Incrementally merge CSV data (website, LinkedIn, HQ, industry) into `data/ae-firms.json` |
 | **Build firm list** | `npx tsx scripts/build-firm-list.ts` | Rebuild `ae-firms.json` from scratch using the CSV and ENR rankings |
@@ -466,7 +455,6 @@ jobboard/                             # Repository root
 ├── ae-job-board/                     # Pipeline application
 │   ├── src/
 │   │   ├── index.ts                  # Main pipeline entry point
-│   │   ├── ingest.ts                 # Adzuna API ingestion (keyword search)
 │   │   ├── ingest-greenhouse.ts      # Greenhouse Boards API ingestion
 │   │   ├── ingest-lever.ts           # Lever Postings API ingestion
 │   │   ├── dedup.ts                  # Cross-source deduplication
@@ -499,7 +487,7 @@ jobboard/                             # Repository root
 │   │   ├── bls-salaries.json         # BLS salary data for estimation
 │   │   ├── enr-rankings.json         # ENR Top 500 rankings
 │   │   ├── industry-map.json         # Industry normalization aliases
-│   │   ├── industry-signals.json     # Description keywords per industry (Adzuna fallback)
+│   │   ├── industry-signals.json     # Description keywords per industry (filtering fallback)
 │   │   ├── role-keywords.json        # Keywords for role filtering
 │   │   ├── tool-keywords.json        # Keywords for tool extraction
 │   │   ├── ai-role-cache.json        # AI role summary cache (generated at runtime)
@@ -539,7 +527,7 @@ jobboard/                             # Repository root
 
 ## Pipeline Steps (What Happens on Each Run)
 
-1. **Ingest** — Fetch jobs from Greenhouse boards, Lever companies, and Adzuna keyword searches
+1. **Ingest** — Fetch jobs from Greenhouse boards and Lever companies
 2. **Dedup** — Remove cross-source duplicates (fingerprint by company+title+location, keep longest description)
 3. **Filter** — Keep only PM/RM/Ops roles at firms in the seed list (any industry) or matching industry signals
 4. **Fetch Webflow State** — Pull existing Webflow items upfront for AI skip optimization and slug dedup
@@ -559,9 +547,8 @@ jobboard/                             # Repository root
 
 - **Which firms are included**: Edit `AccountsforBoard.csv` and re-run `detect-ats.ts` (see "Managing the Firm List" above)
 - **Greenhouse/Lever**: All jobs from detected boards are fetched automatically — no configuration needed
-- **Adzuna keyword searches**: Edit the `SEARCH_QUERIES` array in `src/ingest.ts` to change which keyword searches are performed
 - **Role filtering**: Edit `data/role-keywords.json` to change which job titles/descriptions pass the filter
-- **Industry signals** (fallback for Adzuna): Edit `data/industry-signals.json` to add description keywords for new industries. Firms in the CSV always pass regardless of these signals.
+- **Industry signals**: Edit `data/industry-signals.json` to add description keywords for new industries. Firms in the CSV always pass regardless of these signals.
 - **Industry normalization**: Edit `data/industry-map.json` to add aliases that map freeform CSV values to canonical industry names
 - **Tool detection**: Edit `data/tool-keywords.json` to change which tools are extracted from descriptions
 
@@ -583,7 +570,6 @@ Test coverage includes: filtering logic, industry normalization, location parsin
 |------------------|------------------------|-------------------|
 | Greenhouse API   | Unlimited (public)     | $0                |
 | Lever API        | Unlimited (public)     | $0                |
-| Adzuna API       | 250 req/day            | $0 (free tier)    |
 | People Data Labs | 100 req/month          | $0 (optional)     |
 | Claude Haiku 4.5 | ~400 tokens x 2 x new listings | ~$1–3 (reduced by pre-AI gate + caching) |
 | Webflow CMS      | 60 req/min             | $0 (with plan)    |
@@ -601,7 +587,7 @@ AI costs are lower than a naive estimate because: (a) the pre-AI gate skips list
 | `Could not read AccountsforBoard.csv` | Make sure the CSV is at the repo root (one level above `ae-job-board/`) |
 | No Greenhouse/Lever results | Run `npx tsx scripts/detect-ats.ts` to populate `data/ats-cache.json` |
 | No listings pass filtering | Check that `data/ae-firms.json` has firms. Run `npx tsx scripts/merge-firms.ts` to populate. |
-| Pipeline is slow | Use `--skip-pdl` to skip PDL lookups. Use `--limit 50` to reduce Adzuna results. |
+| Pipeline is slow | Use `--skip-pdl` to skip PDL lookups. |
 | Duplicate listings in Webflow | Cross-source dedup runs at ingestion time (fingerprint). Webflow push also dedupes by `source-url` and fingerprint before creating new items. |
 | Unmatched industry values in logs | Add aliases to `data/industry-map.json` under the appropriate canonical industry. The admin app's Issues view also surfaces these. |
 | AI costs higher than expected | Check `ai-role-cache.json` and `ai-company-cache.json` exist in `data/`. If deleted, the cache rebuilds from scratch and makes API calls for all listings. |

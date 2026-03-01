@@ -7,7 +7,7 @@ Prepared February 2026
 
 ## What This Is
 
-An automated job board that pulls project management, resource management, and operations roles at Architecture & Engineering (A&E) firms from **three sources** — Greenhouse, Lever, and Adzuna — deduplicates them, enriches each listing with company data, salary estimates, and AI-written summaries, then pushes everything into a Webflow CMS collection. A script runs once per day at 3 AM EST via GitHub Actions -- no manual work needed after initial setup.
+An automated job board that pulls project management, resource management, and operations roles at Architecture & Engineering (A&E) firms from **two sources** — Greenhouse and Lever — deduplicates them, enriches each listing with company data, salary estimates, and AI-written summaries, then pushes everything into a Webflow CMS collection. A script runs once per day at 3 AM EST via GitHub Actions -- no manual work needed after initial setup.
 
 The board lives at **mosaicapp.com/jobs** and every listing gets its own page at `/jobs/[slug]`.
 
@@ -32,18 +32,18 @@ The board lives at **mosaicapp.com/jobs** and every listing gets its own page at
 ┌─────────────────────────────────────────────────────────┐
 │                  GitHub Actions (runs daily at 3 AM)    │
 │                                                         │
-│   ┌─────────────┐  ┌───────────┐  ┌──────────────┐     │
-│   │ Greenhouse  │  │   Lever   │  │    Adzuna    │     │
-│   │ (free, full │  │ (free,    │  │ (free tier,  │     │
-│   │ descriptions│  │ full desc)│  │ snippets)    │     │
-│   └──────┬──────┘  └─────┬─────┘  └──────┬───────┘     │
-│          └───────────────┼───────────────┘              │
-│                          ▼                              │
-│                   Cross-Source Dedup                     │
-│                          │                              │
-│           Filter ──► Enrich ──► Score ──► Push          │
-│          (A&E only)  (salary,   (0-100)   to            │
-│                       AI, etc)            Webflow       │
+│        ┌─────────────┐       ┌───────────┐              │
+│        │ Greenhouse  │       │   Lever   │              │
+│        │ (free, full │       │ (free,    │              │
+│        │ descriptions│       │ full desc)│              │
+│        └──────┬──────┘       └─────┬─────┘              │
+│               └───────────┬───────┘                     │
+│                           ▼                             │
+│                    Cross-Source Dedup                    │
+│                           │                             │
+│            Filter ──► Enrich ──► Score ──► Push         │
+│           (A&E only)  (salary,   (0-100)   to           │
+│                        AI, etc)            Webflow      │
 └──────────────────────────────────────────┬──────────────┘
                                            │
                                            ▼
@@ -430,7 +430,7 @@ Each card in a collection list should show:
 
 This section is for the **developer / technical person** setting things up. All the code is already written and tested. You don't need to write any code. You need to:
 1. Install a few things on your computer
-2. Create accounts on 3 services and get API keys (Greenhouse and Lever are free and need no accounts)
+2. Create accounts on 2 services and get API keys (Greenhouse and Lever are free and need no accounts)
 3. Get 2 IDs from the Webflow designer
 4. Run the ATS detection script (finds which firms use Greenhouse/Lever)
 5. Plug the keys in
@@ -483,22 +483,11 @@ Git is version control software. You need it to download and manage the code.
 
 ## B1. Get Your API Keys
 
-You need accounts with 3 external services plus 2 IDs from Webflow. Create them in order.
+You need accounts with 2 external services plus 2 IDs from Webflow. Create them in order.
 
 > **Note:** Greenhouse and Lever APIs are free and require no authentication — the pipeline uses them automatically. No accounts needed for those.
 
-### 1. Adzuna API (Job data source -- FREE, no credit card needed)
-1. Go to https://developer.adzuna.com/
-2. Click **"Sign Up"** in the top right
-3. Fill in your name, email, and password
-4. Check your email and click the verification link
-5. Once logged in, you'll land on the **dashboard**. Your **App ID** and **App Key** are displayed right there.
-6. Write them down exactly as shown (no spaces, case-sensitive):
-   - `ADZUNA_APP_ID`: ___________________________
-   - `ADZUNA_APP_KEY`: ___________________________
-7. The free tier allows 250 API requests per day. The pipeline uses about 100 requests per run, so you have plenty of room.
-
-### 2. People Data Labs (Company enrichment -- OPTIONAL, FREE tier, no credit card needed)
+### 1. People Data Labs (Company enrichment -- OPTIONAL, FREE tier, no credit card needed)
 
 > **This is optional.** The pipeline works without it. PDL adds extra company data (employee count, industry, etc.) but the firm seed list and CSV already provide the most important fields. Skip this if you want to get up and running quickly — you can always add it later.
 
@@ -512,7 +501,7 @@ You need accounts with 3 external services plus 2 IDs from Webflow. Create them 
 7. Free tier gives you 100 company lookups per month. The pipeline caches results so it only looks up each company once per 30 days. This is enough to get started. If you need more, the paid plan is $99/month for 1,000 lookups.
 8. If you skip this, use the `--skip-pdl` flag when running the pipeline, or simply don't set the `PDL_API_KEY` environment variable.
 
-### 3. Anthropic / Claude API (AI-written summaries -- ~$3-5/month, needs credit card)
+### 2. Anthropic / Claude API (AI-written summaries -- ~$3-5/month, needs credit card)
 1. Go to https://console.anthropic.com/
 2. Click **"Sign Up"** and create an account
 3. You'll need to add a payment method (credit card). Billing is usage-based -- you only pay for what you use. Expected cost is $3-5/month for the whole job board.
@@ -523,7 +512,7 @@ You need accounts with 3 external services plus 2 IDs from Webflow. Create them 
 8. Write it down:
    - `ANTHROPIC_API_KEY`: ___________________________
 
-### 4. Webflow API Token (ask the Webflow designer for help with this)
+### 3. Webflow API Token (ask the Webflow designer for help with this)
 1. Log in to the Webflow dashboard for the mosaicapp.com project
 2. Click on the **site** to open its settings
 3. Go to **Site Settings** (gear icon)
@@ -538,7 +527,7 @@ You need accounts with 3 external services plus 2 IDs from Webflow. Create them 
 10. Write it down:
     - `WEBFLOW_API_TOKEN`: ___________________________
 
-### 5. Webflow Collection ID and Site ID (get these from the Webflow designer)
+### 4. Webflow Collection ID and Site ID (get these from the Webflow designer)
 The designer should have noted these when creating the CMS collection (Section A1). If not:
 
 **Collection ID:**
@@ -565,15 +554,13 @@ Write them down:
 
 | # | Name | Starts with / looks like | Required? | Got it? |
 |---|------|-------------------------|-----------|---------|
-| 1 | `ADZUNA_APP_ID` | Short alphanumeric string | Yes | [ ] |
-| 2 | `ADZUNA_APP_KEY` | Longer alphanumeric string | Yes | [ ] |
-| 3 | `PDL_API_KEY` | Long string | Optional | [ ] |
-| 4 | `ANTHROPIC_API_KEY` | `sk-ant-api03-...` | Yes | [ ] |
-| 5 | `WEBFLOW_API_TOKEN` | Long hex string | Yes | [ ] |
-| 6 | `WEBFLOW_COLLECTION_ID` | `647...` (24 char hex) | Yes | [ ] |
-| 7 | `WEBFLOW_SITE_ID` | `647...` (24 char hex) | Yes | [ ] |
+| 1 | `PDL_API_KEY` | Long string | Optional | [ ] |
+| 2 | `ANTHROPIC_API_KEY` | `sk-ant-api03-...` | Yes | [ ] |
+| 3 | `WEBFLOW_API_TOKEN` | Long hex string | Yes | [ ] |
+| 4 | `WEBFLOW_COLLECTION_ID` | `647...` (24 char hex) | Yes | [ ] |
+| 5 | `WEBFLOW_SITE_ID` | `647...` (24 char hex) | Yes | [ ] |
 
-**Do not proceed until you have at least the 6 required values.** PDL is optional — the pipeline works without it.
+**Do not proceed until you have at least the 4 required values.** PDL is optional — the pipeline works without it.
 
 ---
 
@@ -626,8 +613,6 @@ Open the `.env` file in a text editor. On Mac you can use: `open -e .env`. On Wi
 Replace each placeholder with your actual keys from Section B1:
 
 ```
-ADZUNA_APP_ID=abc123
-ADZUNA_APP_KEY=def456789abcdef
 PDL_API_KEY=your_pdl_key_here
 ANTHROPIC_API_KEY=sk-ant-api03-xxxxxxxxxxxx
 WEBFLOW_API_TOKEN=your_webflow_token_here
@@ -703,32 +688,27 @@ You should see:
 
 ### Test 2: Dry run (no writes to Webflow)
 
-This fetches real job data from all three sources (Greenhouse, Lever, and Adzuna), filters it, and shows what would be published -- but does NOT write anything to Webflow. Safe to run repeatedly.
+This fetches real job data from both sources (Greenhouse and Lever), filters it, and shows what would be published -- but does NOT write anything to Webflow. Safe to run repeatedly.
 
 ```bash
-npx tsx src/index.ts --dry-run --limit 20
+npx tsx src/index.ts --dry-run
 ```
 
-**What "npx tsx" means:** `npx` runs a tool without installing it globally. `tsx` runs TypeScript files. `src/index.ts` is the main pipeline script. `--dry-run` means "don't push to Webflow." `--limit 20` means "only process the first 20 Adzuna listings" (Greenhouse and Lever always fetch all postings).
+**What "npx tsx" means:** `npx` runs a tool without installing it globally. `tsx` runs TypeScript files. `src/index.ts` is the main pipeline script. `--dry-run` means "don't push to Webflow."
 
 You should see output like:
 ```
 [timestamp] INFO  DRY RUN MODE — no CMS writes
-[timestamp] INFO  Limiting to 20 listings
 [timestamp] INFO  === Step 1: Ingesting from all sources ===
-[timestamp] INFO  --- 1a: Adzuna ---
-[timestamp] INFO  Ingesting: "project manager architecture"
-...
-[timestamp] INFO  Adzuna: 20 listings
-[timestamp] INFO  --- 1b: Greenhouse (45 boards) ---
+[timestamp] INFO  --- 1a: Greenhouse (45 boards) ---
 [timestamp] INFO  Greenhouse [gensler]: 12 jobs from Gensler
 ...
 [timestamp] INFO  Greenhouse total: 156 listings from 45 boards
-[timestamp] INFO  --- 1c: Lever (23 companies) ---
+[timestamp] INFO  --- 1b: Lever (23 companies) ---
 [timestamp] INFO  Lever [hdr]: 8 postings from HDR
 ...
 [timestamp] INFO  Lever total: 67 listings from 23 companies
-[timestamp] INFO  Total: 243 raw → 218 after dedup
+[timestamp] INFO  Total: 223 raw → 198 after dedup
 [timestamp] INFO  === Step 2: Filtering (role + firm match) ===
 [timestamp] INFO  62 listings passed filtering
 ...
@@ -737,12 +717,12 @@ You should see output like:
 [timestamp] INFO    [45] Operations Manager at HDR — Omaha, NE
 ...
 [timestamp] INFO  === Pipeline Summary ===
-[timestamp] INFO    Ingested:       243
-[timestamp] INFO    After dedup:    218
+[timestamp] INFO    Ingested:       223
+[timestamp] INFO    After dedup:    198
 [timestamp] INFO    After filter:   62
 ```
 
-**If you see listings in the output, it's working.** The numbers in brackets `[55]` are quality scores (0-100). Note how Greenhouse and Lever pull many more listings than Adzuna because they fetch all postings from each firm's board.
+**If you see listings in the output, it's working.** The numbers in brackets `[55]` are quality scores (0-100).
 
 > **Tip:** If Greenhouse/Lever results are empty or show "0 boards", you need to run the ATS detection script first: `npx tsx scripts/detect-ats.ts`
 
@@ -750,11 +730,8 @@ You should see output like:
 
 | What you see | What's wrong | Fix |
 |-------------|-------------|-----|
-| `ADZUNA_APP_ID or ADZUNA_APP_KEY not set` | `.env` file is missing or you're in the wrong directory | Make sure you're in the `ae-job-board` folder. Run `ls .env` -- if it says "no such file", you need to create it (Section B2, Step 3). |
-| `Error fetching ... 401` | Adzuna API key is wrong | Log in to https://developer.adzuna.com/ and copy-paste the keys again. |
-| `Error fetching ... 429` | Adzuna rate limit hit | You've run the pipeline too many times today. Wait until tomorrow (resets at midnight UTC). |
-| `Filter: 20 → 0 listings passed` | No A&E firms in this batch of results | Try without `--limit` to search more broadly: `npx tsx src/index.ts --dry-run` |
-| Everything says "0" in the summary | Adzuna keys are probably wrong, or your internet is down | Check the log lines above the summary for error messages. |
+| `Filter: 0 listings passed` | No A&E firms matched in results | Check that the ATS cache has entries. Run `npx tsx scripts/detect-ats.ts` if needed. |
+| Everything says "0" in the summary | API keys may be wrong, or your internet is down | Check the log lines above the summary for error messages. |
 | Greenhouse/Lever show "0 boards" or "0 companies" | ATS cache is missing or empty | Run `npx tsx scripts/detect-ats.ts` first to detect which firms use Greenhouse/Lever. |
 | `Could not read AccountsforBoard.csv` | CSV not found | Make sure `AccountsforBoard.csv` is at the repo root (one level above `ae-job-board/`). |
 
@@ -763,8 +740,8 @@ You should see output like:
 **Only do this after the Webflow designer has created the CMS collection (Part A1).**
 
 ```bash
-# Push up to 5 listings to Webflow
-npx tsx src/index.ts --limit 5
+# Push listings to Webflow
+npx tsx src/index.ts
 ```
 
 This takes about 2-3 minutes. When it's done, check the output for:
@@ -823,15 +800,13 @@ Now add each secret, one at a time. For each one:
 
 | # | Secret Name (type this exactly) | Value (paste your key) | Required? |
 |---|------|------|------|
-| 1 | `ADZUNA_APP_ID` | Your Adzuna App ID | Yes |
-| 2 | `ADZUNA_APP_KEY` | Your Adzuna App Key | Yes |
-| 3 | `ANTHROPIC_API_KEY` | Your Claude API key (starts with sk-ant-) | Yes |
-| 4 | `WEBFLOW_API_TOKEN` | Your Webflow API token | Yes |
-| 5 | `WEBFLOW_COLLECTION_ID` | Your Jobs collection ID from Webflow | Yes |
-| 6 | `WEBFLOW_SITE_ID` | Your Webflow site ID | Yes |
-| 7 | `PDL_API_KEY` | Your People Data Labs API key | Optional |
+| 1 | `ANTHROPIC_API_KEY` | Your Claude API key (starts with sk-ant-) | Yes |
+| 2 | `WEBFLOW_API_TOKEN` | Your Webflow API token | Yes |
+| 3 | `WEBFLOW_COLLECTION_ID` | Your Jobs collection ID from Webflow | Yes |
+| 4 | `WEBFLOW_SITE_ID` | Your Webflow site ID | Yes |
+| 5 | `PDL_API_KEY` | Your People Data Labs API key | Optional |
 
-After adding the secrets, you should see them listed on the page (the values are hidden -- that's normal). The 6 required secrets must all be present. PDL is optional -- skip it if you haven't set up a PDL account.
+After adding the secrets, you should see them listed on the page (the values are hidden -- that's normal). The 4 required secrets must all be present. PDL is optional -- skip it if you haven't set up a PDL account.
 
 ### Step 3: Verify the workflow file exists
 
@@ -865,9 +840,8 @@ Wait 24 hours, then go back to the Actions tab. You should see a second run that
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| Run shows red X | A secret is missing or wrong | Go to Settings > Secrets and check the 6 required secrets are there |
-| "Error: ADZUNA_APP_ID not set" in logs | You typed the secret name wrong | Delete and re-create the secret with the exact name |
-| Run succeeds but Webflow is empty | Webflow token or IDs are wrong | Double-check secrets 5, 6, and 7 |
+| Run shows red X | A secret is missing or wrong | Go to Settings > Secrets and check the 4 required secrets are there |
+| Run succeeds but Webflow is empty | Webflow token or IDs are wrong | Double-check the `WEBFLOW_API_TOKEN`, `WEBFLOW_COLLECTION_ID`, and `WEBFLOW_SITE_ID` secrets |
 | "Process completed with exit code 1" | General error | Click on the failed step and read the error message. Usually it's an API key issue. |
 
 ---
@@ -878,7 +852,7 @@ Once both sides are set up, verify the connection works end-to-end.
 
 ## Verification Checklist
 
-- [ ] Run `npx tsx src/index.ts --limit 5` locally
+- [ ] Run `npx tsx src/index.ts` locally
 - [ ] Open Webflow CMS > Jobs collection
 - [ ] Verify 5 items appeared
 - [ ] Check that these fields are populated:
@@ -915,10 +889,10 @@ Complete these steps to launch:
 - [ ] Canonical URLs verified (Webflow default is fine)
 
 ### Automation Side
-- [ ] All 7 API keys/IDs obtained and working
+- [ ] All 5 API keys/IDs obtained and working
 - [ ] Local dry-run test passed
 - [ ] Local live test pushed 5-10 items to Webflow successfully
-- [ ] GitHub Actions secrets configured (6 required + 1 optional)
+- [ ] GitHub Actions secrets configured (4 required + 1 optional)
 - [ ] Manual GitHub Actions run completed successfully
 - [ ] Automatic daily run confirmed after 24 hours
 
@@ -941,7 +915,7 @@ Complete these steps to launch:
 | Create "Jobs" CMS collection | Designer | See [Section A1](#a1-create-the-jobs-cms-collection) -- all 24 fields |
 | Design collection template page | Designer | See [Section A2](#a2-design-the-collection-template-page) |
 | Design /jobs landing page | Designer | See [Section A3](#a3-design-the-hub-pages) -- main landing |
-| Get API accounts | Developer | See [Section B1](#b1-get-your-api-keys) -- 5 services |
+| Get API accounts | Developer | See [Section B1](#b1-get-your-api-keys) -- 3 services |
 | Configure .env and test locally | Developer | See [Section B2](#b2-set-up-the-repository) and [B3](#b3-test-locally-before-deploying) |
 | Deploy to GitHub Actions | Developer | See [Section B4](#b4-deploy-to-github-actions-automatic-daily-runs) |
 | Add JSON-LD schema | Designer | See structured data section in [A2](#a2-design-the-collection-template-page) |
@@ -1006,8 +980,7 @@ The automation pipeline already handles all enrichment (company data, salary est
 ## "No listings passed filtering"
 
 This means either:
-- The sources returned results but none matched A&E role keywords or firms. **Normal for small test runs.** Try without `--limit` to search more broadly.
-- Your Adzuna API keys are wrong and no data was ingested. Check the log output for errors in Step 1.
+- The sources returned results but none matched A&E role keywords or firms.
 - Your ATS cache is empty so Greenhouse/Lever returned nothing. Run `npx tsx scripts/detect-ats.ts` first.
 
 ## Listings appear in CMS but not on the site
@@ -1028,8 +1001,7 @@ You need to **publish the site** after the pipeline pushes data. The automation 
 1. Go to GitHub > Actions > click the failed run
 2. Click on the job to see logs
 3. Common issues:
-   - **Secret not set**: You forgot to add one of the 7 secrets. Go to Settings > Secrets.
-   - **API rate limit**: Adzuna free tier is 250 requests/day. If you're running the pipeline multiple times per day for testing, you'll hit this. Wait until tomorrow.
+   - **Secret not set**: You forgot to add one of the required secrets. Go to Settings > Secrets.
    - **Webflow 401**: Your Webflow API token expired or doesn't have the right permissions. Generate a new one.
 
 ## "Webflow 10,000 item limit" warning
@@ -1037,7 +1009,6 @@ You need to **publish the site** after the pipeline pushes data. The automation 
 With 45-day expiration windows and aggressive filtering, you should stay well under 10,000. If you're approaching the limit:
 1. Shorten expiration to 30 days (change `45` to `30` in `src/webflow.ts` line 34)
 2. Raise the quality score threshold from 40 to 50 (change in `src/index.ts`)
-3. Drop lower-volume search queries from `src/ingest.ts`
 
 ## Pipeline runs but Webflow is empty
 
@@ -1063,13 +1034,12 @@ Check that:
 ## Monthly (30 minutes)
 - Review the firm list: are important firms being missed? Add them to `AccountsforBoard.csv` (repo root) and re-run `npx tsx scripts/detect-ats.ts` to probe for Greenhouse/Lever boards
 - Optionally run `npx tsx scripts/merge-firms.ts` to sync CSV data into the seed list
-- Check API usage against free tier limits (Adzuna: 250 req/day, PDL: 100 req/month if using it)
+- Check API usage against free tier limits (PDL: 100 req/month if using it)
 - Review Webflow CMS item count (stay under 10,000)
 
 ## Quarterly
 - Update `data/bls-salaries.json` with latest BLS wage data
 - Review and expand `data/enr-rankings.json` if new ENR data is published
-- Audit search queries in `src/ingest.ts` -- add new relevant search terms
 
 ---
 
@@ -1079,7 +1049,6 @@ Check that:
 |---------|-------------|-------------|
 | Greenhouse API | Job listings (full descriptions) | Free (public, no auth) |
 | Lever API | Job listings (full descriptions) | Free (public, no auth) |
-| Adzuna API | Job listings (keyword search) | Free (250 req/day) |
 | People Data Labs | Company enrichment (optional) | Free (100/mo) or $99/mo for 1,000 |
 | Claude API (Haiku) | AI role summaries and company descriptions | ~$3-5/mo |
 | Webflow | CMS hosting, pages, API | Included in existing plan |
@@ -1095,11 +1064,10 @@ Check that:
 | Main pipeline script | `ae-job-board/src/index.ts` |
 | Greenhouse ingestion | `ae-job-board/src/ingest-greenhouse.ts` |
 | Lever ingestion | `ae-job-board/src/ingest-lever.ts` |
-| Adzuna ingestion (keyword search) | `ae-job-board/src/ingest.ts` (SEARCH_QUERIES array) |
 | Cross-source deduplication | `ae-job-board/src/dedup.ts` |
 | Firm list (CSV, source of truth) | `AccountsforBoard.csv` (repo root) |
 | Firm seed list (JSON, metadata) | `ae-job-board/data/ae-firms.json` |
-| Industry description signals | `ae-job-board/data/industry-signals.json` (fallback for Adzuna matching) |
+| Industry description signals | `ae-job-board/data/industry-signals.json` (fallback for firm matching) |
 | ATS detection cache | `ae-job-board/data/ats-cache.json` (generated by `detect-ats.ts`) |
 | ATS detection script | `ae-job-board/scripts/detect-ats.ts` |
 | CSV merge script | `ae-job-board/scripts/merge-firms.ts` |

@@ -145,8 +145,7 @@ describe("filterListings", () => {
     contractType: null,
     contractTime: null,
     category: null,
-    adzunaId: null,
-    source: "adzuna",
+    source: "greenhouse",
     ...overrides,
   });
 

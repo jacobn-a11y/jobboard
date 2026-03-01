@@ -3,7 +3,6 @@ import { readFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { logger } from "./utils/logger.ts";
-import { ingestFromAdzuna } from "./ingest.ts";
 import { ingestFromGreenhouse } from "./ingest-greenhouse.ts";
 import { ingestFromLever } from "./ingest-lever.ts";
 import { deduplicateListings } from "./dedup.ts";
@@ -33,14 +32,9 @@ const PRE_AI_SCORE_THRESHOLD = 45;
 const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");
 const skipPdl = args.includes("--skip-pdl");
-const limitIdx = args.indexOf("--limit");
-const limitRaw = limitIdx >= 0 ? parseInt(args[limitIdx + 1], 10) : undefined;
-const limit = limitRaw && !isNaN(limitRaw) && limitRaw > 0 ? limitRaw : undefined;
 
 if (dryRun) logger.info("DRY RUN MODE — no CMS writes");
 if (skipPdl) logger.info("Skipping PDL enrichment (--skip-pdl)");
-if (limitIdx >= 0 && !limit) logger.warn("Invalid --limit value, ignoring");
-if (limit) logger.info(`Limiting to ${limit} listings`);
 
 // ── Main pipeline ────────────────────────────────────────────────────
 
@@ -63,14 +57,8 @@ async function run(): Promise<void> {
 
   try {
     // ── Step 1: Multi-source ingest ───────────────────────────────────
-    logger.info("=== Step 1: Ingesting from all sources ===");
+    logger.info("=== Step 1: Ingesting from Greenhouse & Lever ===");
 
-    // 1a: Adzuna (keyword-based discovery)
-    logger.info("--- 1a: Adzuna ---");
-    const adzunaListings = await ingestFromAdzuna(limit);
-    logger.info(`Adzuna: ${adzunaListings.length} listings`);
-
-    // 1b: Greenhouse + Lever (direct ATS APIs, from CSV firm list)
     let ghListings: RawListing[] = [];
     let leverListings: RawListing[] = [];
 
@@ -110,17 +98,17 @@ async function run(): Promise<void> {
     }
 
     if (ghBoards.length > 0) {
-      logger.info(`--- 1b: Greenhouse (${ghBoards.length} boards) ---`);
+      logger.info(`--- 1a: Greenhouse (${ghBoards.length} boards) ---`);
       ghListings = await ingestFromGreenhouse(ghBoards);
     }
 
     if (leverCompanies.length > 0) {
-      logger.info(`--- 1c: Lever (${leverCompanies.length} companies) ---`);
+      logger.info(`--- 1b: Lever (${leverCompanies.length} companies) ---`);
       leverListings = await ingestFromLever(leverCompanies);
     }
 
-    // 1d: Cross-source dedup (prefer longer descriptions)
-    const allRaw = [...ghListings, ...leverListings, ...adzunaListings];
+    // 1c: Cross-source dedup (prefer longer descriptions)
+    const allRaw = [...ghListings, ...leverListings];
     summary.totalIngested = allRaw.length;
     const rawListings = deduplicateListings(allRaw);
     summary.afterDedup = rawListings.length;
