@@ -134,5 +134,126 @@
         "count": 10
       }
     ]
+  },
+  {
+    "timestamp": "2026-03-02T23:36:20.528Z",
+    "durationMs": 1240691,
+    "summary": {
+      "totalIngested": 6117,
+      "afterDedup": 6117,
+      "afterFilter": 511,
+      "afterQualityFilter": 495,
+      "created": 70,
+      "updated": 425,
+      "expired": 81,
+      "deleted": 70,
+      "skipped": 16,
+      "errors": 0
+    },
+    "uniqueCompanies": 93,
+    "uniqueStates": [
+      "Alabama",
+      "Arizona",
+      "Arkansas",
+      "Australia",
+      "California",
+      "Colorado",
+      "Connecticut",
+      "Czechia",
+      "Delaware",
+      "District of Columbia",
+      "Florida",
+      "Georgia",
+      "Hawaii",
+      "Idaho",
+      "Illinois",
+      "Indiana",
+      "Iowa",
+      "Ireland",
+      "Italy",
+      "Kansas",
+      "Louisiana",
+      "MG",
+      "Maryland",
+      "Massachusetts",
+      "Michigan",
+      "Missouri",
+      "Nebraska",
+      "New Jersey",
+      "New Mexico",
+      "New York",
+      "North Carolina",
+      "North Dakota",
+      "Ohio",
+      "Oklahoma",
+      "Pennsylvania",
+      "SP",
+      "South Africa",
+      "South Carolina",
+      "South Dakota",
+      "Tennessee",
+      "Texas",
+      "United Arab Emirates",
+      "United Kingdom",
+      "Utah",
+      "Vermont",
+      "Virginia",
+      "Washington",
+      "Wisconsin",
+      "Wyoming"
+    ],
+    "listingsByCategory": {
+      "operations": 121,
+      "project-management": 384,
+      "resource-management": 6
+    },
+    "listingsByIndustry": {
+      "Architecture & Engineering": 511
+    },
+    "unmatchedIndustries": [],
+    "aiCallsMade": 113,
+    "aiCallsSkipped": 73,
+    "topCompanies": [
+      {
+        "name": "Atwell Group",
+        "count": 75
+      },
+      {
+        "name": "Olsson",
+        "count": 48
+      },
+      {
+        "name": "Woolpert",
+        "count": 25
+      },
+      {
+        "name": "Woolpert (Previously SNHA)",
+        "count": 25
+      },
+      {
+        "name": "Amt Engineering",
+        "count": 24
+      },
+      {
+        "name": "Brown Gay Engineers",
+        "count": 15
+      },
+      {
+        "name": "Wade Trim",
+        "count": 12
+      },
+      {
+        "name": "Wood Rodgers",
+        "count": 11
+      },
+      {
+        "name": "Wr Darch",
+        "count": 11
+      },
+      {
+        "name": "Inter Fluve's",
+        "count": 10
+      }
+    ]
   }
 ]
