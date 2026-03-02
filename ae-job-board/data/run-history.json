@@ -1,0 +1,138 @@
+[
+  {
+    "timestamp": "2026-03-02T22:53:34.782Z",
+    "durationMs": 839057,
+    "summary": {
+      "totalIngested": 6116,
+      "afterDedup": 6116,
+      "afterFilter": 513,
+      "afterQualityFilter": 497,
+      "created": 374,
+      "updated": 123,
+      "expired": 0,
+      "deleted": 0,
+      "skipped": 16,
+      "errors": 0
+    },
+    "uniqueCompanies": 93,
+    "uniqueStates": [
+      "Alabama",
+      "Arizona",
+      "Arkansas",
+      "Australia",
+      "California",
+      "Colorado",
+      "Connecticut",
+      "Czechia",
+      "Delaware",
+      "District of Columbia",
+      "FL; Hybrid",
+      "Florida",
+      "Florida 32960",
+      "Florida 33609",
+      "Georgia",
+      "Georgia 30144",
+      "Hawaii",
+      "Idaho",
+      "Illinois",
+      "Indiana",
+      "Iowa",
+      "Ireland",
+      "Italy",
+      "Kansas",
+      "Louisiana",
+      "MG",
+      "Maryland",
+      "Massachusetts",
+      "Michigan",
+      "Missouri",
+      "NC (Hybrid)",
+      "Nebraska",
+      "New Jersey",
+      "New Mexico",
+      "New York",
+      "North Carolina",
+      "North Carolina 28204",
+      "North Dakota",
+      "Ohio",
+      "Oklahoma",
+      "Pennsylvania",
+      "SP",
+      "South Africa",
+      "South Carolina",
+      "South Dakota",
+      "TX (Hybrid - 2 days in-office)",
+      "TX 77380",
+      "Tennessee",
+      "Texas",
+      "Texas 75034",
+      "Texas 75201",
+      "Texas 76102",
+      "Texas 77042",
+      "Texas 77494",
+      "Texas 78728",
+      "United Arab Emirates",
+      "United Kingdom",
+      "United States; Texas",
+      "United States; Utah",
+      "Utah",
+      "Vermont",
+      "Virginia",
+      "Washington",
+      "Wisconsin"
+    ],
+    "listingsByCategory": {
+      "operations": 121,
+      "project-management": 386,
+      "resource-management": 6
+    },
+    "listingsByIndustry": {
+      "Architecture & Engineering": 513
+    },
+    "unmatchedIndustries": [],
+    "aiCallsMade": 0,
+    "aiCallsSkipped": 0,
+    "topCompanies": [
+      {
+        "name": "Atwell Group",
+        "count": 75
+      },
+      {
+        "name": "Olsson",
+        "count": 48
+      },
+      {
+        "name": "Woolpert",
+        "count": 25
+      },
+      {
+        "name": "Woolpert (Previously SNHA)",
+        "count": 25
+      },
+      {
+        "name": "Amt Engineering",
+        "count": 24
+      },
+      {
+        "name": "Brown Gay Engineers",
+        "count": 17
+      },
+      {
+        "name": "Wade Trim",
+        "count": 12
+      },
+      {
+        "name": "Wood Rodgers",
+        "count": 11
+      },
+      {
+        "name": "Wr Darch",
+        "count": 11
+      },
+      {
+        "name": "Inter Fluve's",
+        "count": 10
+      }
+    ]
+  }
+]
