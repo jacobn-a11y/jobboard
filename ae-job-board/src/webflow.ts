@@ -101,6 +101,12 @@ async function apiRequest(
   }
 
   const response = await fetchWithRetry(url, options);
+
+  // DELETE operations return 204 No Content — no body to parse
+  if (response.status === 204) {
+    return {};
+  }
+
   const data = await response.json();
 
   if (!response.ok) {
