@@ -55,4 +55,63 @@ describe("parseLocation", () => {
     expect(result.city).toBe("Washington");
     expect(result.state).toBe("District of Columbia");
   });
+
+  it("strips zip code from state abbreviation", () => {
+    const result = parseLocation("Austin, TX 78728");
+    expect(result.city).toBe("Austin");
+    expect(result.state).toBe("Texas");
+  });
+
+  it("strips zip code from full state name", () => {
+    const result = parseLocation("Dallas, Texas 75034");
+    expect(result.city).toBe("Dallas");
+    expect(result.state).toBe("Texas");
+  });
+
+  it("handles state abbreviation with zip code only", () => {
+    const result = parseLocation("TX 77380");
+    expect(result.state).toBe("Texas");
+  });
+
+  it("handles full state name with zip code only", () => {
+    const result = parseLocation("Florida 32960");
+    expect(result.state).toBe("Florida");
+  });
+
+  it("handles semicolon-separated hybrid notation", () => {
+    const result = parseLocation("FL; Hybrid");
+    expect(result.state).toBe("Florida");
+    expect(result.isRemote).toBe(true);
+  });
+
+  it("handles parenthetical hybrid notation", () => {
+    const result = parseLocation("NC (Hybrid)");
+    expect(result.state).toBe("North Carolina");
+    expect(result.isRemote).toBe(true);
+  });
+
+  it("handles verbose hybrid parenthetical", () => {
+    const result = parseLocation("TX (Hybrid - 2 days in-office)");
+    expect(result.state).toBe("Texas");
+    expect(result.isRemote).toBe(true);
+  });
+
+  it("handles semicolon-separated country and state", () => {
+    const result = parseLocation("United States; Texas");
+    expect(result.state).toBe("Texas");
+    expect(result.city).toBe("");
+  });
+
+  it("handles semicolon-separated country and state (Utah)", () => {
+    const result = parseLocation("United States; Utah");
+    expect(result.state).toBe("Utah");
+    expect(result.city).toBe("");
+  });
+
+  it("handles city, state abbreviation with zip and parenthetical", () => {
+    const result = parseLocation("Houston, TX 77042 (Hybrid)");
+    expect(result.city).toBe("Houston");
+    expect(result.state).toBe("Texas");
+    expect(result.isRemote).toBe(true);
+  });
 });
