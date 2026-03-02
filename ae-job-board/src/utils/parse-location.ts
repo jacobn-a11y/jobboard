@@ -8,6 +8,11 @@
  *   "Chicago, IL, United States"
  *   "Remote - New York, NY"
  *   "Houston, TX (Remote)"
+ *   "Austin, TX 78728"
+ *   "Texas 75034"
+ *   "FL; Hybrid"
+ *   "NC (Hybrid)"
+ *   "United States; Texas"
  */
 
 // Two-letter state abbreviations → full names
@@ -34,67 +39,120 @@ export interface ParsedLocation {
   isRemote: boolean;
 }
 
+/**
+ * Strip noise from a location part: zip codes, parenthetical notes like
+ * "(Hybrid)", "(2 days in-office)", trailing numbers, etc.
+ */
+function cleanPart(part: string): string {
+  return part
+    .replace(/\(.*?\)/g, "")       // remove parenthetical content "(Hybrid)", "(2 days in-office)"
+    .replace(/\b\d{5}(-\d{4})?\b/g, "") // remove 5-digit zip codes (and ZIP+4)
+    .trim();
+}
+
+/**
+ * Try to extract a US state abbreviation or full name from a string.
+ * Handles cases like "TX 77380", "Florida 32960", "NC (Hybrid)".
+ */
+function extractState(part: string): string | null {
+  const cleaned = cleanPart(part);
+  if (!cleaned) return null;
+
+  const upper = cleaned.toUpperCase();
+  if (ABBREV_TO_STATE[upper]) return ABBREV_TO_STATE[upper];
+  if (FULL_STATE_NAMES.has(cleaned)) return cleaned;
+
+  // Try matching a leading 2-letter abbreviation (e.g., "TX 77380" → "TX")
+  const abbrMatch = cleaned.match(/^([A-Z]{2})\b/i);
+  if (abbrMatch && ABBREV_TO_STATE[abbrMatch[1].toUpperCase()]) {
+    return ABBREV_TO_STATE[abbrMatch[1].toUpperCase()];
+  }
+
+  // Try matching a full state name at the start (e.g., "Florida 32960" → "Florida")
+  for (const stateName of FULL_STATE_NAMES) {
+    if (cleaned.toLowerCase().startsWith(stateName.toLowerCase())) {
+      return stateName;
+    }
+  }
+
+  return null;
+}
+
 export function parseLocation(raw: string): ParsedLocation {
   if (!raw || !raw.trim()) {
     return { city: "", state: "", isRemote: false };
   }
 
   const trimmed = raw.trim();
-  const isRemote = /\bremote\b/i.test(trimmed);
+  const isRemote = /\bremote\b/i.test(trimmed) || /\bhybrid\b/i.test(trimmed);
 
-  // Strip "Remote", "(Remote)", "Remote -", etc. to find any embedded location
+  // Strip parenthetical blocks containing remote/hybrid first, then standalone words
   const cleaned = trimmed
-    .replace(/\(?\bremote\b\)?/gi, "")
-    .replace(/^[\s\-–—,]+|[\s\-–—,]+$/g, "")
+    .replace(/\([^)]*\b(remote|hybrid)\b[^)]*\)/gi, "") // "(Remote)", "(Hybrid - 2 days in-office)"
+    .replace(/\b(remote|hybrid)\b/gi, "")               // standalone "Remote", "Hybrid"
+    .replace(/^[\s\-–—,;]+|[\s\-–—,;]+$/g, "")
     .trim();
 
   if (!cleaned) {
     return { city: "", state: "", isRemote };
   }
 
+  // Normalize semicolons to commas so "FL; Hybrid" and "United States; Texas" split correctly
+  const normalized = cleaned.replace(/;/g, ",");
+
   // Split on commas and clean up
-  const parts = cleaned.split(",").map((p) => p.trim()).filter(Boolean);
+  const parts = normalized.split(",").map((p) => p.trim()).filter(Boolean);
 
-  // Drop "United States" / "US" / "USA" if present at the end
-  if (
-    parts.length > 1 &&
-    /^(united states|us|usa)$/i.test(parts[parts.length - 1])
-  ) {
-    parts.pop();
-  }
+  // Drop "United States" / "US" / "USA" from anywhere in the parts list
+  const filtered = parts.filter(
+    (p) => !/^(united states|us|usa)$/i.test(p.trim())
+  );
 
-  if (parts.length === 0) {
+  if (filtered.length === 0) {
     return { city: "", state: "", isRemote };
   }
 
-  // Try to identify state from the last non-country part
-  const lastPart = parts[parts.length - 1];
-  const upperLast = lastPart.toUpperCase();
-
+  // Try to identify state from the last part first, then scan all parts
   let state = "";
   let city = "";
 
-  if (ABBREV_TO_STATE[upperLast]) {
-    // "New York, NY"
-    state = ABBREV_TO_STATE[upperLast];
-    city = parts.slice(0, -1).join(", ");
-  } else if (FULL_STATE_NAMES.has(lastPart)) {
-    // "New York, New York"
-    state = lastPart;
-    city = parts.slice(0, -1).join(", ");
-  } else if (parts.length === 1) {
-    // Single value — could be a city or a state
-    if (FULL_STATE_NAMES.has(lastPart)) {
-      state = lastPart;
-    } else if (ABBREV_TO_STATE[upperLast]) {
-      state = ABBREV_TO_STATE[upperLast];
-    } else {
-      city = lastPart;
-    }
+  // Try the last part
+  const lastPart = filtered[filtered.length - 1];
+  const lastState = extractState(lastPart);
+
+  if (lastState) {
+    state = lastState;
+    city = filtered
+      .slice(0, -1)
+      .map(cleanPart)
+      .filter(Boolean)
+      .join(", ");
+  } else if (filtered.length === 1) {
+    // Single value that didn't match a state — treat as city
+    city = cleanPart(filtered[0]);
   } else {
-    // Unknown format — take best guess: last = state, rest = city
-    city = parts.slice(0, -1).join(", ");
-    state = lastPart;
+    // Last part isn't a state — scan all parts for a state match
+    for (let i = filtered.length - 1; i >= 0; i--) {
+      const match = extractState(filtered[i]);
+      if (match) {
+        state = match;
+        city = filtered
+          .filter((_, j) => j !== i)
+          .map(cleanPart)
+          .filter(Boolean)
+          .join(", ");
+        break;
+      }
+    }
+    // If still no state found, best guess: last = state, rest = city
+    if (!state) {
+      city = filtered
+        .slice(0, -1)
+        .map(cleanPart)
+        .filter(Boolean)
+        .join(", ");
+      state = cleanPart(lastPart);
+    }
   }
 
   return { city, state, isRemote };

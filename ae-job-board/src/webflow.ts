@@ -309,6 +309,30 @@ export async function deleteStaleItems(): Promise<number> {
   return deleted;
 }
 
+export async function publishItems(itemIds: string[]): Promise<void> {
+  if (itemIds.length === 0) return;
+
+  const collectionId = getCollectionId();
+  // Webflow v2 items/publish endpoint accepts up to 100 IDs per call
+  const batchSize = 100;
+
+  for (let i = 0; i < itemIds.length; i += batchSize) {
+    const batch = itemIds.slice(i, i + batchSize);
+    try {
+      await apiRequest(
+        "POST",
+        `/collections/${collectionId}/items/publish`,
+        { itemIds: batch }
+      );
+      logger.info(
+        `Published CMS items: batch ${Math.floor(i / batchSize) + 1} (${batch.length} items)`
+      );
+    } catch (err) {
+      logger.error(`Failed to publish CMS item batch starting at index ${i}`, err);
+    }
+  }
+}
+
 export async function publishSite(): Promise<void> {
   const siteId = getSiteId();
   try {
@@ -325,6 +349,7 @@ export async function pushToWebflow(
   const { bySourceUrl, byFingerprint } = await getExistingItems();
   let created = 0;
   let updated = 0;
+  const itemIdsToPublish: string[] = [];
 
   for (const listing of listings) {
     try {
@@ -353,9 +378,11 @@ export async function pushToWebflow(
 
       if (existingItem) {
         await updateItem(existingItem.id, listing);
+        itemIdsToPublish.push(existingItem.id);
         updated++;
       } else {
         const newId = await createItem(listing);
+        itemIdsToPublish.push(newId);
         const item = toWebflowItem(listing);
         const slug = item.fieldData.slug;
         // Update indexes so later listings in this batch can match
@@ -377,13 +404,16 @@ export async function pushToWebflow(
     }
   }
 
+  // Publish CMS items to the live collection (required in Webflow API v2)
+  await publishItems(itemIdsToPublish);
+
   // Expire stale pipeline-managed items (set to draft)
   const expired = await expireStaleItems();
 
   // Hard-delete pipeline-managed items that expired 30+ days ago
   const deleted = await deleteStaleItems();
 
-  // Publish
+  // Publish site
   await publishSite();
 
   return { created, updated, expired, deleted };
