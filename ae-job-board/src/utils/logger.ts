@@ -23,6 +23,9 @@ function ensureLogDir(): void {
 function formatEntry(entry: LogEntry): string {
   const base = `[${entry.timestamp}] ${entry.level.toUpperCase().padEnd(5)} ${entry.message}`;
   if (entry.data !== undefined) {
+    if (entry.data instanceof Error) {
+      return `${base} ${entry.data.message}`;
+    }
     return `${base} ${JSON.stringify(entry.data)}`;
   }
   return base;
