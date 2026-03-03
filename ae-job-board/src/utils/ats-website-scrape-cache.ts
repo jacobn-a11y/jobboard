@@ -51,6 +51,12 @@ interface WebsiteATSCache {
 
 let memoizedSources: WebsiteATSSources | null = null;
 
+interface PaylocityRef {
+  sourceUrl: string;
+  token: string;
+  kind: "board" | "detail" | "other";
+}
+
 function baseATSName(raw: string): string {
   return raw.replace(/\s*\(.+?\)\s*$/, "").trim().toLowerCase();
 }
@@ -161,6 +167,54 @@ function extractPaylocitySourceUrl(url: URL): string {
   return url.toString();
 }
 
+function extractPaylocityRef(url: URL): PaylocityRef | null {
+  if (url.hostname !== "recruiting.paylocity.com") return null;
+
+  const parts = url.pathname.split("/").filter(Boolean);
+  if (parts.length < 4) {
+    return {
+      sourceUrl: `https://${url.host}${url.pathname}`,
+      token: `other:${url.pathname.toLowerCase()}`,
+      kind: "other",
+    };
+  }
+
+  const p0 = parts[0]?.toLowerCase();
+  const p1 = parts[1]?.toLowerCase();
+  const p2 = parts[2]?.toLowerCase();
+  const p3 = parts[3] ?? "";
+
+  if (p0 === "recruiting" && p1 === "jobs" && p2 === "all" && p3) {
+    return {
+      sourceUrl: `https://${url.host}/recruiting/jobs/all/${p3}`,
+      token: `board:all:${p3.toLowerCase()}`,
+      kind: "board",
+    };
+  }
+
+  if (p0 === "recruiting" && p1 === "jobs" && p2 === "list" && p3) {
+    return {
+      sourceUrl: `https://${url.host}/recruiting/jobs/list/${p3}`,
+      token: `board:list:${p3.toLowerCase()}`,
+      kind: "board",
+    };
+  }
+
+  if (p0 === "recruiting" && p1 === "jobs" && (p2 === "details" || p2 === "apply") && p3) {
+    return {
+      sourceUrl: `https://${url.host}/recruiting/jobs/${p2}/${p3}`,
+      token: `detail:${p3.toLowerCase()}`,
+      kind: "detail",
+    };
+  }
+
+  return {
+    sourceUrl: `https://${url.host}${url.pathname}`,
+    token: `other:${url.pathname.toLowerCase()}`,
+    kind: "other",
+  };
+}
+
 function extractUltiProSourceUrl(url: URL): string {
   if (!/^(recruiting|recruiting2)\.ultipro\.com$/i.test(url.hostname)) return "";
 
@@ -230,6 +284,7 @@ export function loadWebsiteATSSources(): WebsiteATSSources {
   }
 
   const seen = new Set<string>();
+  const paylocityBoardFirmKeys = new Set<string>();
   const results = cache.results ?? {};
 
   for (const [key, result] of Object.entries(results)) {
@@ -279,7 +334,13 @@ export function loadWebsiteATSSources(): WebsiteATSSources {
         sourceUrl = extractWorkdaySourceUrl(parsed);
       } else if (atsName === "paylocity" && host === "recruiting.paylocity.com") {
         provider = "paylocity";
-        sourceUrl = extractPaylocitySourceUrl(parsed);
+        const ref = extractPaylocityRef(parsed);
+        if (!ref) continue;
+        sourceUrl = ref.sourceUrl;
+        token = ref.token;
+        if (ref.kind === "board") {
+          paylocityBoardFirmKeys.add(firmKey);
+        }
       } else if (atsName === "ultipro" && host.endsWith(".ultipro.com")) {
         provider = "ultipro";
         sourceUrl = extractUltiProSourceUrl(parsed);
@@ -329,6 +390,13 @@ export function loadWebsiteATSSources(): WebsiteATSSources {
     }
   }
 
-  memoizedSources = { entries, allowedFirmKeys };
+  const filteredEntries = entries.filter((entry) => {
+    if (entry.provider !== "paylocity") return true;
+    const firmKey = normalizeCacheKey(entry.companyName);
+    if (!paylocityBoardFirmKeys.has(firmKey)) return true;
+    return !entry.token.startsWith("detail:");
+  });
+
+  memoizedSources = { entries: filteredEntries, allowedFirmKeys };
   return memoizedSources;
 }

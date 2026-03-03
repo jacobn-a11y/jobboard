@@ -2,6 +2,7 @@ import { logger } from "./logger.ts";
 
 export class RateLimiter {
   private timestamps: number[] = [];
+  private lastWaitLogAt: number = 0;
   private readonly maxRequests: number;
   private readonly windowMs: number;
   private readonly name: string;
@@ -25,9 +26,13 @@ export class RateLimiter {
 
       const oldestInWindow = this.timestamps[0];
       const waitTime = this.windowMs - (now - oldestInWindow) + 100; // +100ms buffer
-      logger.info(
-        `${this.name} rate limit reached, waiting ${Math.ceil(waitTime / 1000)}s`
-      );
+      // Suppress duplicate wait logs from concurrent callers hitting the same limiter.
+      if (now - this.lastWaitLogAt >= 1000) {
+        logger.info(
+          `${this.name} rate limit reached, waiting ${Math.ceil(waitTime / 1000)}s`
+        );
+        this.lastWaitLogAt = now;
+      }
       await new Promise((resolve) => setTimeout(resolve, waitTime));
     }
   }
