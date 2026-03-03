@@ -47,20 +47,57 @@ const PRE_AI_SCORE_THRESHOLD = 45;
 const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");
 const skipPdl = args.includes("--skip-pdl");
+const ALL_ATS_PROVIDERS = [
+  "greenhouse",
+  "lever",
+  "ashby",
+  "workable",
+  "smartrecruiters",
+  "breezy",
+  "zoho",
+  "jobscore",
+  "workday",
+  "paylocity",
+  "ultipro",
+  "icims",
+  "freshteam",
+  "jobvite",
+  "trinethire",
+] as const;
+type ATSProvider = (typeof ALL_ATS_PROVIDERS)[number];
+const allProviderSet = new Set<string>(ALL_ATS_PROVIDERS);
+const configuredProviders = (process.env.ATS_PROVIDERS ?? "")
+  .split(",")
+  .map((provider) => provider.trim().toLowerCase())
+  .filter(Boolean);
+const unknownProviders = configuredProviders.filter((provider) => !allProviderSet.has(provider));
+const enabledProviders = new Set<string>(
+  configuredProviders.length > 0
+    ? configuredProviders.filter((provider) => allProviderSet.has(provider))
+    : ALL_ATS_PROVIDERS
+);
 const parsedEnrichConcurrency = Number(process.env.ENRICH_CONCURRENCY ?? "12");
 const ENRICH_CONCURRENCY = Number.isFinite(parsedEnrichConcurrency) && parsedEnrichConcurrency > 0
   ? Math.floor(parsedEnrichConcurrency)
   : 12;
-const parsedAIConcurrency = Number(process.env.AI_CONCURRENCY ?? "4");
+const parsedAIConcurrency = Number(process.env.AI_CONCURRENCY ?? "2");
 const AI_CONCURRENCY = Number.isFinite(parsedAIConcurrency) && parsedAIConcurrency > 0
   ? Math.floor(parsedAIConcurrency)
-  : 4;
+  : 2;
 const runAIWithLimit = createConcurrencyLimiter(AI_CONCURRENCY);
 
 if (dryRun) logger.info("DRY RUN MODE — no CMS writes");
 if (skipPdl) logger.info("Skipping PDL enrichment (--skip-pdl)");
+if (unknownProviders.length > 0) {
+  logger.warn(`Ignoring unknown ATS providers in ATS_PROVIDERS: ${unknownProviders.join(", ")}`);
+}
 logger.info(`Enrichment concurrency: ${ENRICH_CONCURRENCY}`);
 logger.info(`AI concurrency: ${AI_CONCURRENCY}`);
+logger.info(`ATS providers: ${[...enabledProviders].join(", ")}`);
+
+function shouldRunProvider(provider: ATSProvider): boolean {
+  return enabledProviders.has(provider);
+}
 
 function canonicalSeedUrl(seedUrl: string): string {
   try {
@@ -172,9 +209,9 @@ async function run(): Promise<void> {
         const entry = atsCache[key];
         if (!entry || !isCacheValid(entry)) continue;
 
-        if (entry.provider === "greenhouse") {
+        if (entry.provider === "greenhouse" && shouldRunProvider("greenhouse")) {
           ghBoards.push({ boardToken: entry.boardToken, companyName: name });
-        } else if (entry.provider === "lever") {
+        } else if (entry.provider === "lever" && shouldRunProvider("lever")) {
           leverCompanies.push({ companySlug: entry.boardToken, companyName: name });
         }
       }
@@ -184,42 +221,42 @@ async function run(): Promise<void> {
 
     // Pull additional providers directly from ats-website-scrape-cache.json
     for (const entry of websiteATS.entries) {
-      if (entry.provider === "ashby" && entry.token) {
+      if (entry.provider === "ashby" && entry.token && shouldRunProvider("ashby")) {
         ashbyBoards.push({ organization: entry.token, companyName: entry.companyName });
-      } else if (entry.provider === "workable") {
+      } else if (entry.provider === "workable" && shouldRunProvider("workable")) {
         workableBoards.push({
           accountSlug: entry.token || undefined,
           seedUrl: entry.sourceUrl,
           companyName: entry.companyName,
         });
-      } else if (entry.provider === "smartrecruiters" && entry.token) {
+      } else if (entry.provider === "smartrecruiters" && entry.token && shouldRunProvider("smartrecruiters")) {
         smartRecruitersCompanies.push({
           companyIdentifier: entry.token,
           companyName: entry.companyName,
         });
-      } else if (entry.provider === "breezy" && entry.token) {
+      } else if (entry.provider === "breezy" && entry.token && shouldRunProvider("breezy")) {
         breezyCompanies.push({ companySlug: entry.token, companyName: entry.companyName });
-      } else if (entry.provider === "zoho" && entry.token) {
+      } else if (entry.provider === "zoho" && entry.token && shouldRunProvider("zoho")) {
         zohoCompanies.push({
           companySlug: entry.token,
           seedUrl: entry.sourceUrl,
           companyName: entry.companyName,
         });
-      } else if (entry.provider === "jobscore" && entry.token) {
+      } else if (entry.provider === "jobscore" && entry.token && shouldRunProvider("jobscore")) {
         jobScoreCompanies.push({ companySlug: entry.token, companyName: entry.companyName });
-      } else if (entry.provider === "workday") {
+      } else if (entry.provider === "workday" && shouldRunProvider("workday")) {
         workdayBoards.push({ seedUrl: entry.sourceUrl, companyName: entry.companyName });
-      } else if (entry.provider === "paylocity") {
+      } else if (entry.provider === "paylocity" && shouldRunProvider("paylocity")) {
         paylocityBoards.push({ seedUrl: entry.sourceUrl, companyName: entry.companyName });
-      } else if (entry.provider === "ultipro") {
+      } else if (entry.provider === "ultipro" && shouldRunProvider("ultipro")) {
         ultiProBoards.push({ seedUrl: entry.sourceUrl, companyName: entry.companyName });
-      } else if (entry.provider === "icims") {
+      } else if (entry.provider === "icims" && shouldRunProvider("icims")) {
         icimsCompanies.push({ seedUrl: entry.sourceUrl, companyName: entry.companyName });
-      } else if (entry.provider === "freshteam") {
+      } else if (entry.provider === "freshteam" && shouldRunProvider("freshteam")) {
         freshteamBoards.push({ seedUrl: entry.sourceUrl, companyName: entry.companyName });
-      } else if (entry.provider === "jobvite") {
+      } else if (entry.provider === "jobvite" && shouldRunProvider("jobvite")) {
         jobviteCompanies.push({ seedUrl: entry.sourceUrl, companyName: entry.companyName });
-      } else if (entry.provider === "trinethire") {
+      } else if (entry.provider === "trinethire" && shouldRunProvider("trinethire")) {
         triNetHireCompanies.push({ seedUrl: entry.sourceUrl, companyName: entry.companyName });
       }
     }
@@ -259,105 +296,105 @@ async function run(): Promise<void> {
     // Ingest providers in parallel to reduce total wall-clock runtime.
     const ingestTasks: Array<Promise<void>> = [];
 
-    if (ghBoardsUnique.length > 0) {
+    if (shouldRunProvider("greenhouse") && ghBoardsUnique.length > 0) {
       ingestTasks.push((async () => {
         logger.info(`--- 1a: Greenhouse (${ghBoardsUnique.length} boards) ---`);
         ghListings = await ingestFromGreenhouse(ghBoardsUnique);
       })());
     }
 
-    if (leverCompaniesUnique.length > 0) {
+    if (shouldRunProvider("lever") && leverCompaniesUnique.length > 0) {
       ingestTasks.push((async () => {
         logger.info(`--- 1b: Lever (${leverCompaniesUnique.length} companies) ---`);
         leverListings = await ingestFromLever(leverCompaniesUnique);
       })());
     }
 
-    if (ashbyBoardsUnique.length > 0) {
+    if (shouldRunProvider("ashby") && ashbyBoardsUnique.length > 0) {
       ingestTasks.push((async () => {
         logger.info(`--- 1c: Ashby (${ashbyBoardsUnique.length} boards) ---`);
         ashbyListings = await ingestFromAshby(ashbyBoardsUnique);
       })());
     }
 
-    if (workableBoardsUnique.length > 0) {
+    if (shouldRunProvider("workable") && workableBoardsUnique.length > 0) {
       ingestTasks.push((async () => {
         logger.info(`--- 1d: Workable (${workableBoardsUnique.length} boards) ---`);
         workableListings = await ingestFromWorkable(workableBoardsUnique);
       })());
     }
 
-    if (smartRecruitersCompaniesUnique.length > 0) {
+    if (shouldRunProvider("smartrecruiters") && smartRecruitersCompaniesUnique.length > 0) {
       ingestTasks.push((async () => {
         logger.info(`--- 1e: SmartRecruiters (${smartRecruitersCompaniesUnique.length} companies) ---`);
         smartRecruitersListings = await ingestFromSmartRecruiters(smartRecruitersCompaniesUnique);
       })());
     }
 
-    if (breezyCompaniesUnique.length > 0) {
+    if (shouldRunProvider("breezy") && breezyCompaniesUnique.length > 0) {
       ingestTasks.push((async () => {
         logger.info(`--- 1f: Breezy (${breezyCompaniesUnique.length} companies) ---`);
         breezyListings = await ingestFromBreezy(breezyCompaniesUnique);
       })());
     }
 
-    if (zohoCompaniesUnique.length > 0) {
+    if (shouldRunProvider("zoho") && zohoCompaniesUnique.length > 0) {
       ingestTasks.push((async () => {
         logger.info(`--- 1g: Zoho Recruit (${zohoCompaniesUnique.length} companies) ---`);
         zohoListings = await ingestFromZoho(zohoCompaniesUnique);
       })());
     }
 
-    if (jobScoreCompaniesUnique.length > 0) {
+    if (shouldRunProvider("jobscore") && jobScoreCompaniesUnique.length > 0) {
       ingestTasks.push((async () => {
         logger.info(`--- 1h: JobScore (${jobScoreCompaniesUnique.length} companies) ---`);
         jobScoreListings = await ingestFromJobScore(jobScoreCompaniesUnique);
       })());
     }
 
-    if (workdayBoardsUnique.length > 0) {
+    if (shouldRunProvider("workday") && workdayBoardsUnique.length > 0) {
       ingestTasks.push((async () => {
         logger.info(`--- 1i: Workday (${workdayBoardsUnique.length} companies) ---`);
         workdayListings = await ingestFromWorkday(workdayBoardsUnique);
       })());
     }
 
-    if (paylocityBoardsUnique.length > 0) {
+    if (shouldRunProvider("paylocity") && paylocityBoardsUnique.length > 0) {
       ingestTasks.push((async () => {
         logger.info(`--- 1j: Paylocity (${paylocityBoardsUnique.length} companies) ---`);
         paylocityListings = await ingestFromPaylocity(paylocityBoardsUnique);
       })());
     }
 
-    if (ultiProBoardsUnique.length > 0) {
+    if (shouldRunProvider("ultipro") && ultiProBoardsUnique.length > 0) {
       ingestTasks.push((async () => {
         logger.info(`--- 1k: UltiPro (${ultiProBoardsUnique.length} companies) ---`);
         ultiProListings = await ingestFromUltiPro(ultiProBoardsUnique);
       })());
     }
 
-    if (icimsCompaniesUnique.length > 0) {
+    if (shouldRunProvider("icims") && icimsCompaniesUnique.length > 0) {
       ingestTasks.push((async () => {
         logger.info(`--- 1l: iCIMS (${icimsCompaniesUnique.length} companies) ---`);
         icimsListings = await ingestFromICIMS(icimsCompaniesUnique);
       })());
     }
 
-    if (freshteamBoardsUnique.length > 0) {
+    if (shouldRunProvider("freshteam") && freshteamBoardsUnique.length > 0) {
       ingestTasks.push((async () => {
         logger.info(`--- 1m: Freshteam (${freshteamBoardsUnique.length} companies) ---`);
         freshteamListings = await ingestFromFreshteam(freshteamBoardsUnique);
       })());
     }
 
-    if (jobviteCompaniesUnique.length > 0) {
+    if (shouldRunProvider("jobvite") && jobviteCompaniesUnique.length > 0) {
       ingestTasks.push((async () => {
         logger.info(`--- 1n: Jobvite (${jobviteCompaniesUnique.length} companies) ---`);
         jobviteListings = await ingestFromJobvite(jobviteCompaniesUnique);
       })());
     }
 
-    if (triNetHireCompaniesUnique.length > 0) {
+    if (shouldRunProvider("trinethire") && triNetHireCompaniesUnique.length > 0) {
       ingestTasks.push((async () => {
         logger.info(`--- 1o: TriNet Hire (${triNetHireCompaniesUnique.length} companies) ---`);
         triNetHireListings = await ingestFromTriNetHire(triNetHireCompaniesUnique);

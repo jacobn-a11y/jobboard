@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { logger } from "./utils/logger.ts";
 import type { AEFirm, CompanyEnrichment } from "./utils/types.ts";
+import { RateLimiter } from "./utils/rate-limiter.ts";
 import { createHash } from "crypto";
 import { readFileSync, writeFileSync, existsSync, unlinkSync } from "fs";
 import { join, dirname } from "path";
@@ -10,6 +11,16 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROLE_CACHE_PATH = join(__dirname, "../data/ai-role-cache.json");
 const COMPANY_CACHE_PATH = join(__dirname, "../data/ai-company-cache.json");
 const COMPANY_TTL_DAYS = 365;
+const parsedAnthropicRPM = Number(process.env.ANTHROPIC_REQUESTS_PER_MINUTE ?? "45");
+const ANTHROPIC_REQUESTS_PER_MINUTE =
+  Number.isFinite(parsedAnthropicRPM) && parsedAnthropicRPM > 0
+    ? Math.floor(parsedAnthropicRPM)
+    : 45;
+const anthropicRateLimiter = new RateLimiter(
+  ANTHROPIC_REQUESTS_PER_MINUTE,
+  60_000,
+  "Anthropic"
+);
 
 // ── AI call counters (for stats tracking) ─────────────────────────────
 
@@ -188,6 +199,7 @@ Company Size: ${input.size || "Unknown"}
 Location: ${input.location}
 Job Description: ${input.description.slice(0, 2000)}`;
 
+  await anthropicRateLimiter.acquire();
   const response = await anthropic.messages.create({
     model: "claude-haiku-4-5-20251001",
     max_tokens: 300,
@@ -213,6 +225,7 @@ ENR Rank: ${input.enrRank ?? "Unranked"}
 Founded: ${input.founded || "Unknown"}
 Additional context: ${input.pdlSummary || "None available"}`;
 
+  await anthropicRateLimiter.acquire();
   const response = await anthropic.messages.create({
     model: "claude-haiku-4-5-20251001",
     max_tokens: 250,
