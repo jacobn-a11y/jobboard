@@ -1,6 +1,6 @@
 # A&E Job Board — Automation Backend
 
-Automated pipeline that ingests job listings from **Greenhouse** and **Lever**, filters them to project management, resource management, and operations roles at Architecture & Engineering firms, enriches each listing with company data and AI-generated content, and publishes to Webflow CMS. Runs daily via GitHub Actions.
+Automated pipeline that ingests job listings from **Greenhouse**, **Lever**, and additional quick-win ATS providers from `data/ats-website-scrape-cache.json` (currently **Ashby**, **Workable**, **SmartRecruiters**, **Breezy**, **Zoho Recruit**, **JobScore**, **Workday**, **Paylocity**, **UltiPro**, **iCIMS**, **Freshteam**, **Jobvite**, and **TriNet Hire**), filters them to project management, resource management, and operations roles at Architecture & Engineering firms, enriches each listing with company data and AI-generated content, and publishes to Webflow CMS. Runs daily via GitHub Actions.
 
 > **Admin App for Mac** — A desktop monitoring app is available for checking pipeline health, managing secrets, viewing logs, and triggering manual runs. [Download the latest `.dmg` from GitHub Releases](https://github.com/jacobn-a11y/jobboard/releases).
 
@@ -105,6 +105,8 @@ Automated pipeline that ingests job listings from **Greenhouse** and **Lever**, 
 ### First-Time ATS Detection
 
 Before the first pipeline run, detect which firms from the CSV use Greenhouse or Lever for their job boards. This probes each firm (~200ms per firm) and caches results in `data/ats-cache.json` with a 30-day TTL.
+
+If you also have a website ATS scrape export, place it at `data/ats-website-scrape-cache.json`. The pipeline reads this file directly to ingest quick-win providers (Ashby, Workable, SmartRecruiters, Breezy, Zoho Recruit, JobScore, Workday, Paylocity, UltiPro, iCIMS, Freshteam, Jobvite, TriNet Hire) for those specific firms.
 
 ```bash
 # Probe all ~6,700 firms (takes a while the first time)
@@ -271,16 +273,24 @@ Each listing gets a 0–100 quality score based on data completeness (salary dat
 
 ## Data Sources and Ingestion Flow
 
-The pipeline pulls jobs from **two independent sources** to maximize coverage of the ~6,700 A&E firms in the CSV:
+The pipeline pulls jobs from multiple ATS sources to maximize coverage:
 
 | Source | API | Auth | Cost | What It Provides |
 |--------|-----|------|------|-----------------|
 | **Greenhouse** | `boards-api.greenhouse.io/v1/boards/{token}/jobs` | None (public) | Free | Full HTML descriptions, department, location, apply URL |
 | **Lever** | `api.lever.co/v0/postings/{company}` | None (public) | Free | Full structured descriptions, salary range, commitment type, team/department |
+| **Ashby** | `api.ashbyhq.com/posting-api/job-board/{org}` | None (public) | Free | Full descriptions, location, employment type, optional compensation |
+| **Workable** | `apply.workable.com/api/v1/widget/accounts/{account}?details=true` | None (public) | Free | Listing metadata + HTML description |
+| **SmartRecruiters** | `api.smartrecruiters.com/v1/companies/{id}/postings` (+ posting details endpoint) | None (public) | Free | Structured postings + sectioned job ad content |
+| **Breezy** | `{company}.breezy.hr/json` | None (public) | Free | Listing metadata (title/location/type) |
+| **Zoho Recruit** | `{company}.zohorecruit.com` careers RSS feed (`downloadrssfeed`) | None (public) | Free | Job title, location/category metadata, rich description HTML |
+| **JobScore** | `careers.jobscore.com/jobs/{company}/feed.atom` | None (public) | Free | Atom feed with posting links, location/job type tags, full description content |
 
 ### How ingestion works
 
-1. **Greenhouse + Lever** (ATS-based): The pipeline reads `AccountsforBoard.csv` and checks `data/ats-cache.json` to see which firms have a Greenhouse board or Lever company page (detected by `scripts/detect-ats.ts`). For each match, it fetches **all current job postings** directly from that firm's board. These provide full, untruncated job descriptions.
+1. **Source discovery**
+   - **Greenhouse + Lever**: The pipeline reads `AccountsforBoard.csv` and checks `data/ats-cache.json` (from `scripts/detect-ats.ts`) to find board/company tokens.
+   - **Ashby + Workable + SmartRecruiters + Breezy + Zoho Recruit + JobScore**: The pipeline reads `data/ats-website-scrape-cache.json`, extracts tokens from `results[*].atsDetected[*].url`, and ingests only those detected firms.
 
 2. **Cross-source deduplication**: All results are merged and deduplicated. A fingerprint is built from `normalized(company) + normalized(title) + normalized(location)`. When the same job appears in both sources, the pipeline keeps the version with the **longest description**. **Multiple openings for the same role:** If the same company has multiple requisitions with an identical title and location (e.g., two "Senior PM" openings in New York from Greenhouse), the dedup preserves both — it only collapses listings across different sources, not within the same source.
 
@@ -332,7 +342,7 @@ After each run, the pipeline logs any unmatched industry values. To fix them, ad
 
 ## Managing the Firm List
 
-The list of firms lives in **`AccountsforBoard.csv`** in the repo root. The pipeline reads this CSV on every run to determine which Greenhouse/Lever boards to query.
+Primary firm list is **`AccountsforBoard.csv`** in the repo root (used for Greenhouse/Lever detection and general enrichment). Additional firms/providers can come from **`data/ats-website-scrape-cache.json`** for website-detected quick-win ATS sources.
 
 ### Adding or Removing Firms
 
@@ -457,6 +467,12 @@ jobboard/                             # Repository root
 │   │   ├── index.ts                  # Main pipeline entry point
 │   │   ├── ingest-greenhouse.ts      # Greenhouse Boards API ingestion
 │   │   ├── ingest-lever.ts           # Lever Postings API ingestion
+│   │   ├── ingest-ashby.ts           # Ashby public posting API ingestion
+│   │   ├── ingest-workable.ts        # Workable widget API ingestion
+│   │   ├── ingest-smartrecruiters.ts # SmartRecruiters posting API ingestion
+│   │   ├── ingest-breezy.ts          # Breezy public JSON ingestion
+│   │   ├── ingest-zoho.ts            # Zoho Recruit RSS ingestion
+│   │   ├── ingest-jobscore.ts        # JobScore Atom feed ingestion
 │   │   ├── dedup.ts                  # Cross-source deduplication
 │   │   ├── filter.ts                 # Role + firm filtering (Levenshtein fuzzy match)
 │   │   ├── enrich.ts                 # Company enrichment (PDL + seed list)
@@ -469,6 +485,7 @@ jobboard/                             # Repository root
 │   │   └── utils/
 │   │       ├── types.ts              # Shared TypeScript types
 │   │       ├── ats-cache.ts          # ATS detection cache (read/write/TTL)
+│   │       ├── ats-website-scrape-cache.ts # Website ATS cache loader/token extraction
 │   │       ├── csv.ts                # CSV parser
 │   │       ├── parse-location.ts     # Location string → city/state/isRemote
 │   │       ├── normalize-industry.ts # Industry normalization (alias map + substring)
@@ -484,6 +501,7 @@ jobboard/                             # Repository root
 │   ├── data/
 │   │   ├── ae-firms.json             # Seed list (6,500+ firms with metadata)
 │   │   ├── ats-cache.json            # ATS detection results (generated by detect-ats.ts)
+│   │   ├── ats-website-scrape-cache.json # Website ATS scrape results (used for quick-win provider ingestion)
 │   │   ├── bls-salaries.json         # BLS salary data for estimation
 │   │   ├── enr-rankings.json         # ENR Top 500 rankings
 │   │   ├── industry-map.json         # Industry normalization aliases

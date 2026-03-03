@@ -2,6 +2,8 @@ import { readFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { logger } from "./utils/logger.ts";
+import { loadWebsiteATSSources } from "./utils/ats-website-scrape-cache.ts";
+import { normalizeCacheKey } from "./utils/ats-cache.ts";
 import type { RawListing, AEFirm, RoleKeywords } from "./utils/types.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -41,6 +43,9 @@ const normalizedFirms = firmList.map((f) => ({
   normalized: normalizeFirmName(f.name),
   aliasesNormalized: f.aliases.map(normalizeFirmName),
 }));
+
+// Extra allow-list from website ATS cache (firms discovered there should pass firm gate).
+const websiteATSFirmKeys = loadWebsiteATSSources().allowedFirmKeys;
 
 // ── Levenshtein distance ─────────────────────────────────────────────
 
@@ -153,6 +158,11 @@ function matchFirm(
     if (similarity(entry.normalized, normalizedCompany) >= 0.85) {
       return { matched: true, firm: entry.firm };
     }
+  }
+
+  // Strategy A2: Direct allow-list from ats-website-scrape-cache.json
+  if (websiteATSFirmKeys.has(normalizeCacheKey(companyName))) {
+    return { matched: true, firm: null };
   }
 
   // Strategy B: Check description for industry signals (need 2+)
