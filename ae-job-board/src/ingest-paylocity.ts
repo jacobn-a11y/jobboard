@@ -1,10 +1,12 @@
 import { RateLimiter } from "./utils/rate-limiter.ts";
 import { fetchWithRetry } from "./utils/fetch-with-retry.ts";
 import { logger } from "./utils/logger.ts";
+import { mapWithConcurrency } from "./utils/concurrency.ts";
 import { decodeEntities, extractJobPostingJsonLd, extractMetaContent, htmlToText } from "./utils/html-parsing.ts";
 import type { RawListing } from "./utils/types.ts";
 
 const rateLimiter = new RateLimiter(6, 1000, "Paylocity");
+const INGEST_CONCURRENCY = Number(process.env.PAYLOCITY_INGEST_CONCURRENCY ?? "8");
 
 interface PaylocityJobLocation {
   Name?: string;
@@ -219,17 +221,25 @@ export async function ingestFromPaylocity(
   boards: Array<{ seedUrl: string; companyName: string }>
 ): Promise<RawListing[]> {
   const listings: RawListing[] = [];
-
-  for (const { seedUrl, companyName } of boards) {
-    try {
-      const jobs = await fetchPaylocityJobs(seedUrl, companyName);
-      if (jobs.length > 0) {
-        logger.info(`Paylocity: ${jobs.length} jobs from ${companyName}`);
-        listings.push(...jobs);
+  const groups = await mapWithConcurrency(
+    boards,
+    INGEST_CONCURRENCY,
+    async ({ seedUrl, companyName }) => {
+      try {
+        const jobs = await fetchPaylocityJobs(seedUrl, companyName);
+        if (jobs.length > 0) {
+          logger.info(`Paylocity: ${jobs.length} jobs from ${companyName}`);
+        }
+        return jobs;
+      } catch (err) {
+        logger.error(`Paylocity error for ${companyName} (${seedUrl})`, err);
+        return [] as RawListing[];
       }
-    } catch (err) {
-      logger.error(`Paylocity error for ${companyName} (${seedUrl})`, err);
     }
+  );
+
+  for (const jobs of groups) {
+    listings.push(...jobs);
   }
 
   logger.info(`Paylocity total: ${listings.length} listings from ${boards.length} companies`);

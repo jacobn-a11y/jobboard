@@ -33,6 +33,7 @@ import { pushToWebflow, getExistingItems, getExistingSlugs } from "./webflow.ts"
 import { parseLocation } from "./utils/parse-location.ts";
 import { normalizeIndustry, unmatchedIndustries } from "./utils/normalize-industry.ts";
 import { appendRunHistory } from "./utils/run-history.ts";
+import { mapWithConcurrency } from "./utils/concurrency.ts";
 import type { RunRecord } from "./utils/run-history.ts";
 import type { EnrichedListing, PipelineSummary, RawListing } from "./utils/types.ts";
 
@@ -40,33 +41,20 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const CSV_PATH = join(__dirname, "../../AccountsforBoard.csv");
 
 const PRE_AI_SCORE_THRESHOLD = 45;
-const DEFAULT_CI_MAX_FILTERED = 1500;
 
 // ── CLI args ─────────────────────────────────────────────────────────
 
 const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");
 const skipPdl = args.includes("--skip-pdl");
-const maxFilteredForEnrichArg = args.find((arg) => arg.startsWith("--max-filtered-for-enrich="));
-const maxFilteredForEnrichCli = maxFilteredForEnrichArg
-  ? Number(maxFilteredForEnrichArg.split("=")[1])
-  : null;
-const maxFilteredForEnrichEnv = Number(process.env.MAX_FILTERED_FOR_ENRICH ?? "");
-const isCI = process.env.GITHUB_ACTIONS === "true";
-
-const maxFilteredForEnrich = Number.isFinite(maxFilteredForEnrichCli)
-  ? Math.max(0, Math.floor(maxFilteredForEnrichCli ?? 0))
-  : Number.isFinite(maxFilteredForEnrichEnv)
-    ? Math.max(0, Math.floor(maxFilteredForEnrichEnv))
-    : isCI
-      ? DEFAULT_CI_MAX_FILTERED
-      : 0;
+const parsedEnrichConcurrency = Number(process.env.ENRICH_CONCURRENCY ?? "12");
+const ENRICH_CONCURRENCY = Number.isFinite(parsedEnrichConcurrency) && parsedEnrichConcurrency > 0
+  ? Math.floor(parsedEnrichConcurrency)
+  : 12;
 
 if (dryRun) logger.info("DRY RUN MODE — no CMS writes");
 if (skipPdl) logger.info("Skipping PDL enrichment (--skip-pdl)");
-if (maxFilteredForEnrich > 0) {
-  logger.info(`Enrichment cap enabled: max ${maxFilteredForEnrich} listings`);
-}
+logger.info(`Enrichment concurrency: ${ENRICH_CONCURRENCY}`);
 
 function canonicalSeedUrl(seedUrl: string): string {
   try {
@@ -98,11 +86,6 @@ function dedupeByKey<T>(
   }
 
   return deduped;
-}
-
-function parseIsoDateMs(value: string): number {
-  const ms = new Date(value).getTime();
-  return Number.isNaN(ms) ? 0 : ms;
 }
 
 // ── Main pipeline ────────────────────────────────────────────────────
@@ -429,176 +412,171 @@ async function run(): Promise<void> {
       }
     }
 
-    let enrichmentQueue = filtered;
-    if (maxFilteredForEnrich > 0 && filtered.length > maxFilteredForEnrich) {
-      const existing = filtered.filter(({ listing }) => existingSourceUrls.has(listing.sourceUrl));
-      const fresh = filtered
-        .filter(({ listing }) => !existingSourceUrls.has(listing.sourceUrl))
-        .sort((a, b) => parseIsoDateMs(b.listing.datePosted) - parseIsoDateMs(a.listing.datePosted));
-
-      const existingSlice = existing.slice(0, maxFilteredForEnrich);
-      const remaining = Math.max(0, maxFilteredForEnrich - existingSlice.length);
-      enrichmentQueue = [...existingSlice, ...fresh.slice(0, remaining)];
-
-      logger.warn(
-        `Capping enrichment workload: ${filtered.length} -> ${enrichmentQueue.length} ` +
-        `(kept ${existingSlice.length} existing Webflow items first)`
-      );
-    }
-
     // ── Step 3: Enrich each listing ──────────────────────────────────
     logger.info("=== Step 3: Enriching listings ===");
     let aiSkippedLowQuality = 0;
     let aiSkippedExisting = 0;
+    let completedEnrichment = 0;
 
-    for (let i = 0; i < enrichmentQueue.length; i++) {
-      const { listing, roleCategory, firmMatch } = enrichmentQueue[i];
-      const stepLabel = `[${i + 1}/${enrichmentQueue.length}]`;
+    const enriched = await mapWithConcurrency(
+      filtered,
+      ENRICH_CONCURRENCY,
+      async ({ listing, roleCategory, firmMatch }, index): Promise<EnrichedListing | null> => {
+        const stepLabel = `[${index + 1}/${filtered.length}]`;
 
-      try {
-        // 3a: Company enrichment (skip if --skip-pdl)
-        if (i % 25 === 0 || i === enrichmentQueue.length - 1) {
-          logger.info(`${stepLabel} Enriching: ${listing.title} at ${listing.company}`);
-        }
-        const enrichment = skipPdl ? null : await enrichCompany(listing.company);
-
-        // 3b: ENR rank
-        const enrRank = firmMatch?.enrRank ?? lookupENRRank(listing.company);
-
-        // 3c: Salary
-        let salaryMin = listing.salaryMin;
-        let salaryMax = listing.salaryMax;
-        let salaryEstimated = listing.salaryIsPredicted;
-
-        if (!salaryMin || !salaryMax) {
-          const estimate = estimateSalary(
-            listing.title,
-            listing.location,
-            roleCategory
-          );
-          if (estimate) {
-            salaryMin = estimate.salaryMin;
-            salaryMax = estimate.salaryMax;
-            salaryEstimated = true;
+        try {
+          // 3a: Company enrichment (skip if --skip-pdl)
+          if (index % 25 === 0 || index === filtered.length - 1) {
+            logger.info(`${stepLabel} Enriching: ${listing.title} at ${listing.company}`);
           }
-        }
+          const enrichment = skipPdl ? null : await enrichCompany(listing.company);
 
-        // 3d: Tools
-        const toolsMentioned = extractTools(listing.description);
+          // 3b: ENR rank
+          const enrRank = firmMatch?.enrRank ?? lookupENRRank(listing.company);
 
-        // 3e: Experience level
-        const experienceLevel = detectExperienceLevel(listing.title);
+          // 3c: Salary
+          let salaryMin = listing.salaryMin;
+          let salaryMax = listing.salaryMax;
+          let salaryEstimated = listing.salaryIsPredicted;
 
-        // 3f: Pre-AI quality score — decide whether to call AI
-        const preAIScore = calculatePreAIScore({
-          salaryMin,
-          salaryMax,
-          salaryEstimated,
-          firmMatch,
-          enrichment,
-          enrRank,
-          description: listing.description,
-          toolsMentioned,
-          title: listing.title,
-          location: listing.location,
-        });
+          if (!salaryMin || !salaryMax) {
+            const estimate = estimateSalary(
+              listing.title,
+              listing.location,
+              roleCategory
+            );
+            if (estimate) {
+              salaryMin = estimate.salaryMin;
+              salaryMax = estimate.salaryMax;
+              salaryEstimated = true;
+            }
+          }
 
-        let roleSummary = "";
-        let companyDescription = "";
+          // 3d: Tools
+          const toolsMentioned = extractTools(listing.description);
 
-        const isExistingInWebflow = existingSourceUrls.has(listing.sourceUrl);
+          // 3e: Experience level
+          const experienceLevel = detectExperienceLevel(listing.title);
 
-        if (preAIScore < PRE_AI_SCORE_THRESHOLD) {
-          // Skip AI for low-quality listings (unlikely to reach publish threshold of 40)
-          logger.debug(
-            `${stepLabel} Skipping AI (pre-score ${preAIScore} < ${PRE_AI_SCORE_THRESHOLD}): ${listing.title}`
-          );
-          aiSkippedLowQuality++;
-        } else if (isExistingInWebflow) {
-          // Skip AI for listings already in Webflow — they already have content
-          logger.debug(
-            `${stepLabel} Skipping AI (already in Webflow): ${listing.title}`
-          );
-          aiSkippedExisting++;
-        } else {
-          // 3g: Generate AI content
-          const aiResult = await generateContent(
-            listing.title,
-            listing.company,
-            listing.location,
-            listing.description,
+          // 3f: Pre-AI quality score — decide whether to call AI
+          const preAIScore = calculatePreAIScore({
+            salaryMin,
+            salaryMax,
+            salaryEstimated,
             firmMatch,
             enrichment,
-            enrRank
+            enrRank,
+            description: listing.description,
+            toolsMentioned,
+            title: listing.title,
+            location: listing.location,
+          });
+
+          let roleSummary = "";
+          let companyDescription = "";
+
+          const isExistingInWebflow = existingSourceUrls.has(listing.sourceUrl);
+
+          if (preAIScore < PRE_AI_SCORE_THRESHOLD) {
+            // Skip AI for low-quality listings (unlikely to reach publish threshold of 40)
+            logger.debug(
+              `${stepLabel} Skipping AI (pre-score ${preAIScore} < ${PRE_AI_SCORE_THRESHOLD}): ${listing.title}`
+            );
+            aiSkippedLowQuality++;
+          } else if (isExistingInWebflow) {
+            // Skip AI for listings already in Webflow — they already have content
+            logger.debug(
+              `${stepLabel} Skipping AI (already in Webflow): ${listing.title}`
+            );
+            aiSkippedExisting++;
+          } else {
+            // 3g: Generate AI content
+            const aiResult = await generateContent(
+              listing.title,
+              listing.company,
+              listing.location,
+              listing.description,
+              firmMatch,
+              enrichment,
+              enrRank
+            );
+            roleSummary = aiResult.roleSummary;
+            companyDescription = aiResult.companyDescription;
+          }
+
+          // 3h: Final quality score (with AI content if generated)
+          const qualityScore = calculateQualityScore({
+            salaryMin,
+            salaryMax,
+            salaryEstimated,
+            firmMatch,
+            enrichment,
+            enrRank,
+            description: listing.description,
+            toolsMentioned,
+            title: listing.title,
+            location: listing.location,
+            roleSummary,
+            companyDescription,
+          });
+
+          // 3i: Parse job location into structured fields
+          const parsedJobLoc = parseLocation(listing.location);
+
+          // Company HQ: prefer seed list, then enrichment
+          const rawHq = firmMatch?.hq ?? enrichment?.hq ?? "";
+          const hqState = firmMatch?.hqState ?? "";
+          const hqCity = firmMatch?.hqCity ?? "";
+          // If seed list didn't have structured fields, parse the combined string
+          const parsedHq = (!hqState && rawHq) ? parseLocation(rawHq) : null;
+
+          return {
+            title: listing.title,
+            company: listing.company,
+            location: listing.location,
+            description: listing.description,
+            sourceUrl: listing.sourceUrl,
+            datePosted: listing.datePosted,
+            contractType: listing.contractType,
+            salaryMin,
+            salaryMax,
+            salaryEstimated,
+            firmMatch,
+            companyWebsite: firmMatch?.website ?? "",
+            companyLinkedin: firmMatch?.linkedin ?? "",
+            enrichment,
+            enrRank,
+            roleSummary,
+            companyDescription,
+            toolsMentioned,
+            qualityScore,
+            slug: "", // Populated in slug step
+            jobCity: parsedJobLoc.city,
+            jobState: parsedJobLoc.state,
+            isRemote: parsedJobLoc.isRemote,
+            companyHqCity: hqCity || parsedHq?.city || "",
+            companyHqState: hqState || parsedHq?.state || "",
+            industry: normalizeIndustry(firmMatch?.industry ?? enrichment?.industry ?? "Architecture & Engineering"),
+            experienceLevel,
+            roleCategory,
+          };
+        } catch (err) {
+          logger.error(
+            `Error enriching ${listing.title} at ${listing.company}`,
+            err
           );
-          roleSummary = aiResult.roleSummary;
-          companyDescription = aiResult.companyDescription;
+          summary.errors++;
+          return null;
+        } finally {
+          completedEnrichment++;
+          if (completedEnrichment % 100 === 0 || completedEnrichment === filtered.length) {
+            logger.info(`Enrichment progress: ${completedEnrichment}/${filtered.length}`);
+          }
         }
-
-        // 3h: Final quality score (with AI content if generated)
-        const qualityScore = calculateQualityScore({
-          salaryMin,
-          salaryMax,
-          salaryEstimated,
-          firmMatch,
-          enrichment,
-          enrRank,
-          description: listing.description,
-          toolsMentioned,
-          title: listing.title,
-          location: listing.location,
-          roleSummary,
-          companyDescription,
-        });
-
-        // 3i: Parse job location into structured fields
-        const parsedJobLoc = parseLocation(listing.location);
-
-        // Company HQ: prefer seed list, then enrichment
-        const rawHq = firmMatch?.hq ?? enrichment?.hq ?? "";
-        const hqState = firmMatch?.hqState ?? "";
-        const hqCity = firmMatch?.hqCity ?? "";
-        // If seed list didn't have structured fields, parse the combined string
-        const parsedHq = (!hqState && rawHq) ? parseLocation(rawHq) : null;
-
-        enrichedListings.push({
-          title: listing.title,
-          company: listing.company,
-          location: listing.location,
-          description: listing.description,
-          sourceUrl: listing.sourceUrl,
-          datePosted: listing.datePosted,
-          contractType: listing.contractType,
-          salaryMin,
-          salaryMax,
-          salaryEstimated,
-          firmMatch,
-          companyWebsite: firmMatch?.website ?? "",
-          companyLinkedin: firmMatch?.linkedin ?? "",
-          enrichment,
-          enrRank,
-          roleSummary,
-          companyDescription,
-          toolsMentioned,
-          qualityScore,
-          slug: "", // Populated in slug step
-          jobCity: parsedJobLoc.city,
-          jobState: parsedJobLoc.state,
-          isRemote: parsedJobLoc.isRemote,
-          companyHqCity: hqCity || parsedHq?.city || "",
-          companyHqState: hqState || parsedHq?.state || "",
-          industry: normalizeIndustry(firmMatch?.industry ?? enrichment?.industry ?? "Architecture & Engineering"),
-          experienceLevel,
-          roleCategory,
-        });
-      } catch (err) {
-        logger.error(
-          `Error enriching ${listing.title} at ${listing.company}`,
-          err
-        );
-        summary.errors++;
       }
-    }
+    );
+
+    enrichedListings = enriched.filter((listing): listing is EnrichedListing => Boolean(listing));
 
     logger.info(
       `AI optimization: ${aiSkippedLowQuality} skipped (low quality), ${aiSkippedExisting} skipped (existing in Webflow), ` +

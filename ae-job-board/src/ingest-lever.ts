@@ -1,12 +1,14 @@
 import { RateLimiter } from "./utils/rate-limiter.ts";
 import { fetchWithRetry } from "./utils/fetch-with-retry.ts";
 import { logger } from "./utils/logger.ts";
+import { mapWithConcurrency } from "./utils/concurrency.ts";
 import type { RawListing } from "./utils/types.ts";
 
 const LEVER_BASE = "https://api.lever.co/v0/postings";
 
 // Self-imposed rate limit
 const rateLimiter = new RateLimiter(10, 1000, "Lever");
+const INGEST_CONCURRENCY = Number(process.env.LEVER_INGEST_CONCURRENCY ?? "8");
 
 // ── Lever API types ──────────────────────────────────────────────────
 
@@ -164,17 +166,25 @@ export async function ingestFromLever(
   companies: Array<{ companySlug: string; companyName: string }>
 ): Promise<RawListing[]> {
   const listings: RawListing[] = [];
-
-  for (const { companySlug, companyName } of companies) {
-    try {
-      const postings = await fetchLeverPostings(companySlug, companyName);
-      if (postings.length > 0) {
-        logger.info(`Lever [${companySlug}]: ${postings.length} postings from ${companyName}`);
-        listings.push(...postings);
+  const groups = await mapWithConcurrency(
+    companies,
+    INGEST_CONCURRENCY,
+    async ({ companySlug, companyName }) => {
+      try {
+        const postings = await fetchLeverPostings(companySlug, companyName);
+        if (postings.length > 0) {
+          logger.info(`Lever [${companySlug}]: ${postings.length} postings from ${companyName}`);
+        }
+        return postings;
+      } catch (err) {
+        logger.error(`Lever error for ${companyName} (${companySlug})`, err);
+        return [] as RawListing[];
       }
-    } catch (err) {
-      logger.error(`Lever error for ${companyName} (${companySlug})`, err);
     }
+  );
+
+  for (const postings of groups) {
+    listings.push(...postings);
   }
 
   logger.info(`Lever total: ${listings.length} listings from ${companies.length} companies`);

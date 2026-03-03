@@ -1,10 +1,12 @@
 import { RateLimiter } from "./utils/rate-limiter.ts";
 import { fetchWithRetry } from "./utils/fetch-with-retry.ts";
 import { logger } from "./utils/logger.ts";
+import { mapWithConcurrency } from "./utils/concurrency.ts";
 import type { RawListing } from "./utils/types.ts";
 
 const WORKABLE_WIDGET_BASE = "https://apply.workable.com/api/v1/widget/accounts";
 const rateLimiter = new RateLimiter(10, 1000, "Workable");
+const INGEST_CONCURRENCY = Number(process.env.WORKABLE_INGEST_CONCURRENCY ?? "8");
 
 interface WorkableJobLocation {
   city?: string;
@@ -143,23 +145,31 @@ export async function ingestFromWorkable(
   boards: Array<{ accountSlug?: string; seedUrl: string; companyName: string }>
 ): Promise<RawListing[]> {
   const listings: RawListing[] = [];
+  const groups = await mapWithConcurrency(
+    boards,
+    INGEST_CONCURRENCY,
+    async (board) => {
+      try {
+        const accountSlug = board.accountSlug || (await resolveWorkableSlug(board.seedUrl));
+        if (!accountSlug) {
+          logger.warn(`Workable: could not resolve account slug for ${board.companyName} (${board.seedUrl})`);
+          return [] as RawListing[];
+        }
 
-  for (const board of boards) {
-    try {
-      const accountSlug = board.accountSlug || (await resolveWorkableSlug(board.seedUrl));
-      if (!accountSlug) {
-        logger.warn(`Workable: could not resolve account slug for ${board.companyName} (${board.seedUrl})`);
-        continue;
+        const jobs = await fetchWorkableJobs(accountSlug, board.companyName);
+        if (jobs.length > 0) {
+          logger.info(`Workable [${accountSlug}]: ${jobs.length} jobs from ${board.companyName}`);
+        }
+        return jobs;
+      } catch (err) {
+        logger.error(`Workable error for ${board.companyName} (${board.seedUrl})`, err);
+        return [] as RawListing[];
       }
-
-      const jobs = await fetchWorkableJobs(accountSlug, board.companyName);
-      if (jobs.length > 0) {
-        logger.info(`Workable [${accountSlug}]: ${jobs.length} jobs from ${board.companyName}`);
-        listings.push(...jobs);
-      }
-    } catch (err) {
-      logger.error(`Workable error for ${board.companyName} (${board.seedUrl})`, err);
     }
+  );
+
+  for (const jobs of groups) {
+    listings.push(...jobs);
   }
 
   logger.info(`Workable total: ${listings.length} listings from ${boards.length} companies`);

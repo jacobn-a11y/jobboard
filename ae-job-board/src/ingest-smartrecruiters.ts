@@ -1,10 +1,13 @@
 import { RateLimiter } from "./utils/rate-limiter.ts";
 import { fetchWithRetry } from "./utils/fetch-with-retry.ts";
 import { logger } from "./utils/logger.ts";
+import { mapWithConcurrency } from "./utils/concurrency.ts";
 import type { RawListing } from "./utils/types.ts";
 
 const SMART_BASE = "https://api.smartrecruiters.com/v1/companies";
 const rateLimiter = new RateLimiter(8, 1000, "SmartRecruiters");
+const COMPANY_INGEST_CONCURRENCY = Number(process.env.SMARTRECRUITERS_COMPANY_CONCURRENCY ?? "5");
+const DETAIL_FETCH_CONCURRENCY = Number(process.env.SMARTRECRUITERS_DETAIL_CONCURRENCY ?? "8");
 
 interface SmartPostingListItem {
   id: string;
@@ -130,57 +133,67 @@ export async function fetchSmartRecruitersJobs(
   companyName: string
 ): Promise<RawListing[]> {
   const ids = await fetchSmartPostingIds(companyIdentifier);
-  const listings: RawListing[] = [];
+  const rows = await mapWithConcurrency(
+    ids,
+    DETAIL_FETCH_CONCURRENCY,
+    async (postingId) => {
+      const detail = await fetchSmartPostingDetail(companyIdentifier, postingId);
+      if (!detail) return null;
 
-  for (const postingId of ids) {
-    const detail = await fetchSmartPostingDetail(companyIdentifier, postingId);
-    if (!detail) continue;
+      const description = buildDescription(detail);
+      const location = detail.location?.fullLocation
+        || [detail.location?.city, detail.location?.region, detail.location?.country]
+          .filter(Boolean)
+          .join(", ");
 
-    const description = buildDescription(detail);
-    const location = detail.location?.fullLocation
-      || [detail.location?.city, detail.location?.region, detail.location?.country]
-        .filter(Boolean)
-        .join(", ");
+      const employment = mapEmployment(detail.typeOfEmployment?.label ?? "");
 
-    const employment = mapEmployment(detail.typeOfEmployment?.label ?? "");
+      return {
+        title: detail.name,
+        company: companyName,
+        location: location || "",
+        description,
+        sourceUrl: detail.applyUrl
+          || (detail.canonicalPath ? `https://careers.smartrecruiters.com${detail.canonicalPath}` : "")
+          || `${SMART_BASE}/${companyIdentifier}/postings/${postingId}`,
+        datePosted: detail.releasedDate || new Date().toISOString(),
+        salaryMin: null,
+        salaryMax: null,
+        salaryIsPredicted: false,
+        contractType: employment.contractType,
+        contractTime: employment.contractTime,
+        category: detail.department?.label || null,
+        source: "smartrecruiters",
+      } as RawListing;
+    }
+  );
 
-    listings.push({
-      title: detail.name,
-      company: companyName,
-      location: location || "",
-      description,
-      sourceUrl: detail.applyUrl
-        || (detail.canonicalPath ? `https://careers.smartrecruiters.com${detail.canonicalPath}` : "")
-        || `${SMART_BASE}/${companyIdentifier}/postings/${postingId}`,
-      datePosted: detail.releasedDate || new Date().toISOString(),
-      salaryMin: null,
-      salaryMax: null,
-      salaryIsPredicted: false,
-      contractType: employment.contractType,
-      contractTime: employment.contractTime,
-      category: detail.department?.label || null,
-      source: "smartrecruiters",
-    });
-  }
-
-  return listings;
+  return rows.filter((row): row is RawListing => Boolean(row));
 }
 
 export async function ingestFromSmartRecruiters(
   companies: Array<{ companyIdentifier: string; companyName: string }>
 ): Promise<RawListing[]> {
   const listings: RawListing[] = [];
-
-  for (const { companyIdentifier, companyName } of companies) {
-    try {
-      const jobs = await fetchSmartRecruitersJobs(companyIdentifier, companyName);
-      if (jobs.length > 0) {
-        logger.info(`SmartRecruiters [${companyIdentifier}]: ${jobs.length} jobs from ${companyName}`);
-        listings.push(...jobs);
+  const groups = await mapWithConcurrency(
+    companies,
+    COMPANY_INGEST_CONCURRENCY,
+    async ({ companyIdentifier, companyName }) => {
+      try {
+        const jobs = await fetchSmartRecruitersJobs(companyIdentifier, companyName);
+        if (jobs.length > 0) {
+          logger.info(`SmartRecruiters [${companyIdentifier}]: ${jobs.length} jobs from ${companyName}`);
+        }
+        return jobs;
+      } catch (err) {
+        logger.error(`SmartRecruiters error for ${companyName} (${companyIdentifier})`, err);
+        return [] as RawListing[];
       }
-    } catch (err) {
-      logger.error(`SmartRecruiters error for ${companyName} (${companyIdentifier})`, err);
     }
+  );
+
+  for (const jobs of groups) {
+    listings.push(...jobs);
   }
 
   logger.info(`SmartRecruiters total: ${listings.length} listings from ${companies.length} companies`);
