@@ -5,12 +5,18 @@ import { mapWithConcurrency } from "./utils/concurrency.ts";
 import { decodeEntities, extractJobPostingJsonLd, extractMetaContent, htmlToText } from "./utils/html-parsing.ts";
 import type { RawListing } from "./utils/types.ts";
 
-const rateLimiter = new RateLimiter(5, 1000, "iCIMS");
-const DETAIL_FETCH_CONCURRENCY = Number(process.env.ICIMS_DETAIL_CONCURRENCY ?? "6");
-const parsedCompanyConcurrency = Number(process.env.ICIMS_COMPANY_CONCURRENCY ?? "5");
+const parsedRequestsPerSecond = Number(process.env.ICIMS_REQUESTS_PER_SECOND ?? "12");
+const REQUESTS_PER_SECOND = Number.isFinite(parsedRequestsPerSecond) && parsedRequestsPerSecond > 0
+  ? Math.floor(parsedRequestsPerSecond)
+  : 12;
+const rateLimiter = new RateLimiter(REQUESTS_PER_SECOND, 1000, "iCIMS");
+const DETAIL_FETCH_CONCURRENCY = Number(process.env.ICIMS_DETAIL_CONCURRENCY ?? "10");
+const parsedCompanyConcurrency = Number(process.env.ICIMS_COMPANY_CONCURRENCY ?? "8");
 const COMPANY_FETCH_CONCURRENCY = Number.isFinite(parsedCompanyConcurrency) && parsedCompanyConcurrency > 0
   ? Math.floor(parsedCompanyConcurrency)
-  : 5;
+  : 8;
+const detailCache = new Map<string, RawListing | null>();
+const detailInFlight = new Map<string, Promise<RawListing | null>>();
 
 function normalizeSearchUrl(rawUrl: string, expectedHost: string): string | null {
   try {
@@ -172,7 +178,32 @@ function parsePostingFromJsonLd(jobPosting: Record<string, unknown>, fallbackUrl
   };
 }
 
-async function fetchICIMSDetail(detailUrl: string, companyName: string): Promise<RawListing | null> {
+function normalizeDetailUrl(rawUrl: string): string {
+  try {
+    const detail = new URL(rawUrl);
+    detail.search = "";
+    detail.hash = "";
+    return detail.toString();
+  } catch {
+    return rawUrl;
+  }
+}
+
+function boardSeedKey(seedUrl: string): string {
+  const { candidates } = buildSearchCandidates(seedUrl);
+  if (candidates.length === 0) return seedUrl;
+
+  try {
+    const parsed = new URL(candidates[0]);
+    parsed.searchParams.delete("in_iframe");
+    parsed.searchParams.delete("ss");
+    return `${parsed.origin}${parsed.pathname}?${parsed.searchParams.toString()}`;
+  } catch {
+    return candidates[0];
+  }
+}
+
+async function fetchICIMSDetail(detailUrl: string): Promise<RawListing | null> {
   await rateLimiter.acquire();
   const response = await fetchWithRetry(detailUrl, { redirect: "follow" });
   if (!response.ok) return null;
@@ -180,7 +211,7 @@ async function fetchICIMSDetail(detailUrl: string, companyName: string): Promise
   const html = await response.text();
   const posting = extractJobPostingJsonLd(html);
   if (posting) {
-    return parsePostingFromJsonLd(posting, response.url, companyName);
+    return parsePostingFromJsonLd(posting, response.url, "");
   }
 
   const title = extractMetaContent(html, "og:title");
@@ -189,7 +220,7 @@ async function fetchICIMSDetail(detailUrl: string, companyName: string): Promise
 
   return {
     title: title || "Job Opening",
-    company: companyName,
+    company: "",
     location: "",
     description: htmlToText(description),
     sourceUrl: response.url,
@@ -202,6 +233,34 @@ async function fetchICIMSDetail(detailUrl: string, companyName: string): Promise
     category: null,
     source: "icims",
   };
+}
+
+async function fetchICIMSDetailCached(detailUrl: string): Promise<RawListing | null> {
+  const normalized = normalizeDetailUrl(detailUrl);
+  if (detailCache.has(normalized)) {
+    return detailCache.get(normalized) ?? null;
+  }
+  if (detailInFlight.has(normalized)) {
+    return detailInFlight.get(normalized) ?? null;
+  }
+
+  const task = (async () => {
+    try {
+      const listing = await fetchICIMSDetail(normalized);
+      detailCache.set(normalized, listing);
+      return listing;
+    } catch {
+      detailCache.set(normalized, null);
+      return null;
+    }
+  })();
+
+  detailInFlight.set(normalized, task);
+  try {
+    return await task;
+  } finally {
+    detailInFlight.delete(normalized);
+  }
 }
 
 export async function fetchICIMSJobs(seedUrl: string, companyName: string): Promise<RawListing[]> {
@@ -240,18 +299,15 @@ export async function fetchICIMSJobs(seedUrl: string, companyName: string): Prom
     detailLinks.add(seedUrl);
   }
 
-  const normalizedLinks = [...detailLinks].map((link) => {
-    const detail = new URL(link);
-    detail.searchParams.delete("in_iframe");
-    return detail.toString();
-  });
+  const normalizedLinks = [...new Set([...detailLinks].map((link) => normalizeDetailUrl(link)))];
 
   const resolved = await mapWithConcurrency(
     normalizedLinks,
     DETAIL_FETCH_CONCURRENCY,
     async (link) => {
       try {
-        return await fetchICIMSDetail(link, companyName);
+        const listing = await fetchICIMSDetailCached(link);
+        return listing ? { ...listing, company: companyName } : null;
       } catch {
         // Skip failed detail.
         return null;
@@ -266,14 +322,32 @@ export async function ingestFromICIMS(
   companies: Array<{ seedUrl: string; companyName: string }>
 ): Promise<RawListing[]> {
   const listings: RawListing[] = [];
+  const uniqueBoardRefs = new Map<string, { seedUrl: string; companyName: string; aliases: string[] }>();
+  for (const company of companies) {
+    const key = boardSeedKey(company.seedUrl);
+    const existing = uniqueBoardRefs.get(key);
+    if (existing) {
+      existing.aliases.push(company.companyName);
+    } else {
+      uniqueBoardRefs.set(key, { ...company, aliases: [] });
+    }
+  }
+  const refs = [...uniqueBoardRefs.values()];
+  if (refs.length !== companies.length) {
+    logger.info(`iCIMS board dedup: ${companies.length} -> ${refs.length} unique boards`);
+  }
+
   const groups = await mapWithConcurrency(
-    companies,
+    refs,
     Math.max(1, COMPANY_FETCH_CONCURRENCY),
-    async ({ seedUrl, companyName }) => {
+    async ({ seedUrl, companyName, aliases }) => {
       try {
         const jobs = await fetchICIMSJobs(seedUrl, companyName);
         if (jobs.length > 0) {
           logger.info(`iCIMS: ${jobs.length} jobs from ${companyName}`);
+        }
+        if (aliases.length > 0) {
+          logger.debug(`iCIMS aliases folded into ${companyName}: ${aliases.join(", ")}`);
         }
         return jobs;
       } catch (err) {
@@ -287,6 +361,6 @@ export async function ingestFromICIMS(
     listings.push(...jobs);
   }
 
-  logger.info(`iCIMS total: ${listings.length} listings from ${companies.length} companies`);
+  logger.info(`iCIMS total: ${listings.length} listings from ${refs.length} unique boards`);
   return listings;
 }
