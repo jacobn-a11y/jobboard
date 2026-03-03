@@ -191,13 +191,14 @@ export async function createItem(listing: EnrichedListing): Promise<string> {
   const collectionId = getCollectionId();
   const item = toWebflowItem(listing);
 
+  // Use /items/live to create directly on the live site (bypasses staging)
   const result = (await apiRequest(
     "POST",
-    `/collections/${collectionId}/items`,
+    `/collections/${collectionId}/items/live`,
     item
   )) as { id: string };
 
-  logger.info(`Created: ${listing.title} at ${listing.company} [${result.id}]`);
+  logger.info(`Created (live): ${listing.title} at ${listing.company} [${result.id}]`);
   return result.id;
 }
 
@@ -208,19 +209,21 @@ export async function updateItem(
   const collectionId = getCollectionId();
   const item = toWebflowItem(listing);
 
+  // Use /items/{id}/live to update directly on the live site (bypasses staging)
   await apiRequest(
     "PATCH",
-    `/collections/${collectionId}/items/${itemId}`,
+    `/collections/${collectionId}/items/${itemId}/live`,
     item
   );
 
-  logger.info(`Updated: ${listing.title} at ${listing.company} [${itemId}]`);
+  logger.info(`Updated (live): ${listing.title} at ${listing.company} [${itemId}]`);
 }
 
 export async function expireStaleItems(): Promise<number> {
   const collectionId = getCollectionId();
-  let expired = 0;
 
+  // Collect expired item IDs first, then batch-unpublish
+  const toExpire: Array<{ id: string; name: string }> = [];
   let offset = 0;
   const limit = 100;
 
@@ -237,22 +240,52 @@ export async function expireStaleItems(): Promise<number> {
 
       const expirationDate = item.fieldData["expiration-date"] as string;
       if (expirationDate && new Date(expirationDate) < new Date()) {
-        try {
-          // Unpublish from the live site (removes from published collection)
-          await apiRequest(
-            "DELETE",
-            `/collections/${collectionId}/items/${item.id}/live`
-          );
-          logger.info(`Expired (unpublished): ${item.fieldData.name} [${item.id}]`);
-          expired++;
-        } catch (err) {
-          logger.error(`Failed to expire item ${item.id}`, err);
-        }
+        toExpire.push({
+          id: item.id,
+          name: (item.fieldData.name as string) || item.id,
+        });
       }
     }
 
     if (data.items.length < limit) break;
     offset += limit;
+  }
+
+  if (toExpire.length === 0) return 0;
+
+  // Batch unpublish using the dedicated endpoint (per Webflow July 2025 changes)
+  const batchSize = 100;
+  let expired = 0;
+
+  for (let i = 0; i < toExpire.length; i += batchSize) {
+    const batch = toExpire.slice(i, i + batchSize);
+    const ids = batch.map((item) => item.id);
+    try {
+      await apiRequest(
+        "POST",
+        `/collections/${collectionId}/items/unpublish`,
+        { itemIds: ids }
+      );
+      expired += batch.length;
+      for (const item of batch) {
+        logger.info(`Expired (unpublished): ${item.name} [${item.id}]`);
+      }
+    } catch (err) {
+      // Fall back to individual DELETE /live for backwards compatibility
+      logger.warn(`Batch unpublish failed, falling back to individual unpublish`, err);
+      for (const item of batch) {
+        try {
+          await apiRequest(
+            "DELETE",
+            `/collections/${collectionId}/items/${item.id}/live`
+          );
+          logger.info(`Expired (unpublished): ${item.name} [${item.id}]`);
+          expired++;
+        } catch (innerErr) {
+          logger.error(`Failed to expire item ${item.id}`, innerErr);
+        }
+      }
+    }
   }
 
   return expired;
@@ -319,14 +352,19 @@ export async function publishItems(itemIds: string[]): Promise<void> {
   for (let i = 0; i < itemIds.length; i += batchSize) {
     const batch = itemIds.slice(i, i + batchSize);
     try {
-      await apiRequest(
+      const result = (await apiRequest(
         "POST",
         `/collections/${collectionId}/items/publish`,
         { itemIds: batch }
-      );
+      )) as { publishedItemIds?: string[]; errors?: unknown[] };
+      const published = result.publishedItemIds?.length ?? 0;
+      const errors = result.errors?.length ?? 0;
       logger.info(
-        `Published CMS items: batch ${Math.floor(i / batchSize) + 1} (${batch.length} items)`
+        `Publish batch ${Math.floor(i / batchSize) + 1}: ${published} published, ${errors} errors`
       );
+      if (errors > 0) {
+        logger.warn(`Publish errors: ${JSON.stringify(result.errors)}`);
+      }
     } catch (err) {
       logger.error(`Failed to publish CMS item batch starting at index ${i}`, err);
     }
