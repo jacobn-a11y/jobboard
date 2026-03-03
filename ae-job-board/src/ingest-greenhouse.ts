@@ -1,12 +1,14 @@
 import { RateLimiter } from "./utils/rate-limiter.ts";
 import { fetchWithRetry } from "./utils/fetch-with-retry.ts";
 import { logger } from "./utils/logger.ts";
+import { mapWithConcurrency } from "./utils/concurrency.ts";
 import type { RawListing } from "./utils/types.ts";
 
 const GH_BASE = "https://boards-api.greenhouse.io/v1/boards";
 
 // Self-imposed rate limit (no official limit, but be respectful)
 const rateLimiter = new RateLimiter(10, 1000, "Greenhouse");
+const INGEST_CONCURRENCY = Number(process.env.GREENHOUSE_INGEST_CONCURRENCY ?? "10");
 
 // ── Greenhouse API types ─────────────────────────────────────────────
 
@@ -110,17 +112,25 @@ export async function ingestFromGreenhouse(
   boards: Array<{ boardToken: string; companyName: string }>
 ): Promise<RawListing[]> {
   const listings: RawListing[] = [];
-
-  for (const { boardToken, companyName } of boards) {
-    try {
-      const jobs = await fetchGreenhouseJobs(boardToken, companyName);
-      if (jobs.length > 0) {
-        logger.info(`Greenhouse [${boardToken}]: ${jobs.length} jobs from ${companyName}`);
-        listings.push(...jobs);
+  const groups = await mapWithConcurrency(
+    boards,
+    INGEST_CONCURRENCY,
+    async ({ boardToken, companyName }) => {
+      try {
+        const jobs = await fetchGreenhouseJobs(boardToken, companyName);
+        if (jobs.length > 0) {
+          logger.info(`Greenhouse [${boardToken}]: ${jobs.length} jobs from ${companyName}`);
+        }
+        return jobs;
+      } catch (err) {
+        logger.error(`Greenhouse error for ${companyName} (${boardToken})`, err);
+        return [] as RawListing[];
       }
-    } catch (err) {
-      logger.error(`Greenhouse error for ${companyName} (${boardToken})`, err);
     }
+  );
+
+  for (const jobs of groups) {
+    listings.push(...jobs);
   }
 
   logger.info(`Greenhouse total: ${listings.length} listings from ${boards.length} boards`);

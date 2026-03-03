@@ -1,23 +1,16 @@
 import { RateLimiter } from "./utils/rate-limiter.ts";
 import { fetchWithRetry } from "./utils/fetch-with-retry.ts";
 import { logger } from "./utils/logger.ts";
+import { mapWithConcurrency } from "./utils/concurrency.ts";
 import { decodeEntities, extractJobPostingJsonLd, extractMetaContent, htmlToText } from "./utils/html-parsing.ts";
 import type { RawListing } from "./utils/types.ts";
 
 const rateLimiter = new RateLimiter(5, 1000, "iCIMS");
-const DETAIL_FETCH_CONCURRENCY = 4;
-const parsedMaxSearchPages = Number(process.env.ICIMS_MAX_SEARCH_PAGES ?? (process.env.GITHUB_ACTIONS === "true" ? "12" : "25"));
-const MAX_SEARCH_PAGES = Number.isFinite(parsedMaxSearchPages) && parsedMaxSearchPages > 0
-  ? Math.floor(parsedMaxSearchPages)
-  : 25;
+const DETAIL_FETCH_CONCURRENCY = Number(process.env.ICIMS_DETAIL_CONCURRENCY ?? "6");
 const parsedCompanyConcurrency = Number(process.env.ICIMS_COMPANY_CONCURRENCY ?? "5");
 const COMPANY_FETCH_CONCURRENCY = Number.isFinite(parsedCompanyConcurrency) && parsedCompanyConcurrency > 0
   ? Math.floor(parsedCompanyConcurrency)
   : 5;
-const parsedMaxDetailLinks = Number(process.env.ICIMS_MAX_DETAIL_LINKS ?? (process.env.GITHUB_ACTIONS === "true" ? "80" : "0"));
-const MAX_DETAIL_LINKS = Number.isFinite(parsedMaxDetailLinks) && parsedMaxDetailLinks > 0
-  ? Math.floor(parsedMaxDetailLinks)
-  : 0;
 
 function normalizeSearchUrl(rawUrl: string, expectedHost: string): string | null {
   try {
@@ -211,33 +204,13 @@ async function fetchICIMSDetail(detailUrl: string, companyName: string): Promise
   };
 }
 
-async function mapWithConcurrency<T, R>(
-  items: T[],
-  concurrency: number,
-  worker: (item: T) => Promise<R>
-): Promise<R[]> {
-  const results: R[] = [];
-  let index = 0;
-
-  const workers = Array.from({ length: Math.max(1, concurrency) }, async () => {
-    while (index < items.length) {
-      const current = index;
-      index += 1;
-      results[current] = await worker(items[current]);
-    }
-  });
-
-  await Promise.all(workers);
-  return results;
-}
-
 export async function fetchICIMSJobs(seedUrl: string, companyName: string): Promise<RawListing[]> {
   const { candidates, expectedHost } = buildSearchCandidates(seedUrl);
   const detailLinks = new Set<string>();
   const visitedSearchPages = new Set<string>();
   const searchQueue = [...candidates];
 
-  while (searchQueue.length > 0 && visitedSearchPages.size < MAX_SEARCH_PAGES) {
+  while (searchQueue.length > 0) {
     const candidate = searchQueue.shift();
     if (!candidate || visitedSearchPages.has(candidate)) continue;
     visitedSearchPages.add(candidate);
@@ -273,12 +246,8 @@ export async function fetchICIMSJobs(seedUrl: string, companyName: string): Prom
     return detail.toString();
   });
 
-  const detailLinksToFetch = MAX_DETAIL_LINKS > 0
-    ? normalizedLinks.slice(0, MAX_DETAIL_LINKS)
-    : normalizedLinks;
-
   const resolved = await mapWithConcurrency(
-    detailLinksToFetch,
+    normalizedLinks,
     DETAIL_FETCH_CONCURRENCY,
     async (link) => {
       try {

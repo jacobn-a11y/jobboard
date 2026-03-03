@@ -1,9 +1,11 @@
 import { RateLimiter } from "./utils/rate-limiter.ts";
 import { fetchWithRetry } from "./utils/fetch-with-retry.ts";
 import { logger } from "./utils/logger.ts";
+import { mapWithConcurrency } from "./utils/concurrency.ts";
 import type { RawListing } from "./utils/types.ts";
 
 const rateLimiter = new RateLimiter(6, 1000, "Workday");
+const INGEST_CONCURRENCY = Number(process.env.WORKDAY_INGEST_CONCURRENCY ?? "8");
 
 interface WorkdayBoardRef {
   origin: string;
@@ -166,17 +168,25 @@ export async function ingestFromWorkday(
   boards: Array<{ seedUrl: string; companyName: string }>
 ): Promise<RawListing[]> {
   const listings: RawListing[] = [];
-
-  for (const { seedUrl, companyName } of boards) {
-    try {
-      const jobs = await fetchWorkdayJobs(seedUrl, companyName);
-      if (jobs.length > 0) {
-        logger.info(`Workday: ${jobs.length} jobs from ${companyName}`);
-        listings.push(...jobs);
+  const groups = await mapWithConcurrency(
+    boards,
+    INGEST_CONCURRENCY,
+    async ({ seedUrl, companyName }) => {
+      try {
+        const jobs = await fetchWorkdayJobs(seedUrl, companyName);
+        if (jobs.length > 0) {
+          logger.info(`Workday: ${jobs.length} jobs from ${companyName}`);
+        }
+        return jobs;
+      } catch (err) {
+        logger.error(`Workday error for ${companyName} (${seedUrl})`, err);
+        return [] as RawListing[];
       }
-    } catch (err) {
-      logger.error(`Workday error for ${companyName} (${seedUrl})`, err);
     }
+  );
+
+  for (const jobs of groups) {
+    listings.push(...jobs);
   }
 
   logger.info(`Workday total: ${listings.length} listings from ${boards.length} companies`);
