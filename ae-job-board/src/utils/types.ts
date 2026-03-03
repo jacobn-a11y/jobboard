@@ -1,6 +1,21 @@
 // ── Raw listing from any source ──────────────────────────────────────
 
-export type ListingSource = "greenhouse" | "lever";
+export type ListingSource =
+  | "greenhouse"
+  | "lever"
+  | "ashby"
+  | "workable"
+  | "smartrecruiters"
+  | "breezy"
+  | "zoho"
+  | "jobscore"
+  | "workday"
+  | "paylocity"
+  | "ultipro"
+  | "icims"
+  | "freshteam"
+  | "jobvite"
+  | "trinethire";
 
 export interface RawListing {
   title: string;

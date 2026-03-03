@@ -5,8 +5,22 @@ import { fileURLToPath } from "url";
 import { logger } from "./utils/logger.ts";
 import { ingestFromGreenhouse } from "./ingest-greenhouse.ts";
 import { ingestFromLever } from "./ingest-lever.ts";
+import { ingestFromAshby } from "./ingest-ashby.ts";
+import { ingestFromWorkable } from "./ingest-workable.ts";
+import { ingestFromSmartRecruiters } from "./ingest-smartrecruiters.ts";
+import { ingestFromBreezy } from "./ingest-breezy.ts";
+import { ingestFromZoho } from "./ingest-zoho.ts";
+import { ingestFromJobScore } from "./ingest-jobscore.ts";
+import { ingestFromWorkday } from "./ingest-workday.ts";
+import { ingestFromPaylocity } from "./ingest-paylocity.ts";
+import { ingestFromUltiPro } from "./ingest-ultipro.ts";
+import { ingestFromICIMS } from "./ingest-icims.ts";
+import { ingestFromFreshteam } from "./ingest-freshteam.ts";
+import { ingestFromJobvite } from "./ingest-jobvite.ts";
+import { ingestFromTriNetHire } from "./ingest-trinethire.ts";
 import { deduplicateListings } from "./dedup.ts";
 import { loadATSCache, normalizeCacheKey, isCacheValid } from "./utils/ats-cache.ts";
+import { loadWebsiteATSSources } from "./utils/ats-website-scrape-cache.ts";
 import { parseCSV } from "./utils/csv.ts";
 import { filterListings } from "./filter.ts";
 import { enrichCompany, lookupENRRank } from "./enrich.ts";
@@ -57,14 +71,41 @@ async function run(): Promise<void> {
 
   try {
     // ── Step 1: Multi-source ingest ───────────────────────────────────
-    logger.info("=== Step 1: Ingesting from Greenhouse & Lever ===");
+    logger.info("=== Step 1: Ingesting from ATS sources ===");
 
     let ghListings: RawListing[] = [];
     let leverListings: RawListing[] = [];
+    let ashbyListings: RawListing[] = [];
+    let workableListings: RawListing[] = [];
+    let smartRecruitersListings: RawListing[] = [];
+    let breezyListings: RawListing[] = [];
+    let zohoListings: RawListing[] = [];
+    let jobScoreListings: RawListing[] = [];
+    let workdayListings: RawListing[] = [];
+    let paylocityListings: RawListing[] = [];
+    let ultiProListings: RawListing[] = [];
+    let icimsListings: RawListing[] = [];
+    let freshteamListings: RawListing[] = [];
+    let jobviteListings: RawListing[] = [];
+    let triNetHireListings: RawListing[] = [];
 
     const atsCache = loadATSCache();
+    const websiteATS = loadWebsiteATSSources();
     const ghBoards: Array<{ boardToken: string; companyName: string }> = [];
     const leverCompanies: Array<{ companySlug: string; companyName: string }> = [];
+    const ashbyBoards: Array<{ organization: string; companyName: string }> = [];
+    const workableBoards: Array<{ accountSlug?: string; seedUrl: string; companyName: string }> = [];
+    const smartRecruitersCompanies: Array<{ companyIdentifier: string; companyName: string }> = [];
+    const breezyCompanies: Array<{ companySlug: string; companyName: string }> = [];
+    const zohoCompanies: Array<{ companySlug: string; seedUrl: string; companyName: string }> = [];
+    const jobScoreCompanies: Array<{ companySlug: string; companyName: string }> = [];
+    const workdayBoards: Array<{ seedUrl: string; companyName: string }> = [];
+    const paylocityBoards: Array<{ seedUrl: string; companyName: string }> = [];
+    const ultiProBoards: Array<{ seedUrl: string; companyName: string }> = [];
+    const icimsCompanies: Array<{ seedUrl: string; companyName: string }> = [];
+    const freshteamBoards: Array<{ seedUrl: string; companyName: string }> = [];
+    const jobviteCompanies: Array<{ seedUrl: string; companyName: string }> = [];
+    const triNetHireCompanies: Array<{ seedUrl: string; companyName: string }> = [];
 
     // Read firm list from CSV (source of truth), dedup by normalized name
     try {
@@ -97,6 +138,48 @@ async function run(): Promise<void> {
       logger.warn("Could not read AccountsforBoard.csv — skipping ATS ingestion");
     }
 
+    // Pull additional providers directly from ats-website-scrape-cache.json
+    for (const entry of websiteATS.entries) {
+      if (entry.provider === "ashby" && entry.token) {
+        ashbyBoards.push({ organization: entry.token, companyName: entry.companyName });
+      } else if (entry.provider === "workable") {
+        workableBoards.push({
+          accountSlug: entry.token || undefined,
+          seedUrl: entry.sourceUrl,
+          companyName: entry.companyName,
+        });
+      } else if (entry.provider === "smartrecruiters" && entry.token) {
+        smartRecruitersCompanies.push({
+          companyIdentifier: entry.token,
+          companyName: entry.companyName,
+        });
+      } else if (entry.provider === "breezy" && entry.token) {
+        breezyCompanies.push({ companySlug: entry.token, companyName: entry.companyName });
+      } else if (entry.provider === "zoho" && entry.token) {
+        zohoCompanies.push({
+          companySlug: entry.token,
+          seedUrl: entry.sourceUrl,
+          companyName: entry.companyName,
+        });
+      } else if (entry.provider === "jobscore" && entry.token) {
+        jobScoreCompanies.push({ companySlug: entry.token, companyName: entry.companyName });
+      } else if (entry.provider === "workday") {
+        workdayBoards.push({ seedUrl: entry.sourceUrl, companyName: entry.companyName });
+      } else if (entry.provider === "paylocity") {
+        paylocityBoards.push({ seedUrl: entry.sourceUrl, companyName: entry.companyName });
+      } else if (entry.provider === "ultipro") {
+        ultiProBoards.push({ seedUrl: entry.sourceUrl, companyName: entry.companyName });
+      } else if (entry.provider === "icims") {
+        icimsCompanies.push({ seedUrl: entry.sourceUrl, companyName: entry.companyName });
+      } else if (entry.provider === "freshteam") {
+        freshteamBoards.push({ seedUrl: entry.sourceUrl, companyName: entry.companyName });
+      } else if (entry.provider === "jobvite") {
+        jobviteCompanies.push({ seedUrl: entry.sourceUrl, companyName: entry.companyName });
+      } else if (entry.provider === "trinethire") {
+        triNetHireCompanies.push({ seedUrl: entry.sourceUrl, companyName: entry.companyName });
+      }
+    }
+
     if (ghBoards.length > 0) {
       logger.info(`--- 1a: Greenhouse (${ghBoards.length} boards) ---`);
       ghListings = await ingestFromGreenhouse(ghBoards);
@@ -107,8 +190,89 @@ async function run(): Promise<void> {
       leverListings = await ingestFromLever(leverCompanies);
     }
 
-    // 1c: Cross-source dedup (prefer longer descriptions)
-    const allRaw = [...ghListings, ...leverListings];
+    if (ashbyBoards.length > 0) {
+      logger.info(`--- 1c: Ashby (${ashbyBoards.length} boards) ---`);
+      ashbyListings = await ingestFromAshby(ashbyBoards);
+    }
+
+    if (workableBoards.length > 0) {
+      logger.info(`--- 1d: Workable (${workableBoards.length} boards) ---`);
+      workableListings = await ingestFromWorkable(workableBoards);
+    }
+
+    if (smartRecruitersCompanies.length > 0) {
+      logger.info(`--- 1e: SmartRecruiters (${smartRecruitersCompanies.length} companies) ---`);
+      smartRecruitersListings = await ingestFromSmartRecruiters(smartRecruitersCompanies);
+    }
+
+    if (breezyCompanies.length > 0) {
+      logger.info(`--- 1f: Breezy (${breezyCompanies.length} companies) ---`);
+      breezyListings = await ingestFromBreezy(breezyCompanies);
+    }
+
+    if (zohoCompanies.length > 0) {
+      logger.info(`--- 1g: Zoho Recruit (${zohoCompanies.length} companies) ---`);
+      zohoListings = await ingestFromZoho(zohoCompanies);
+    }
+
+    if (jobScoreCompanies.length > 0) {
+      logger.info(`--- 1h: JobScore (${jobScoreCompanies.length} companies) ---`);
+      jobScoreListings = await ingestFromJobScore(jobScoreCompanies);
+    }
+
+    if (workdayBoards.length > 0) {
+      logger.info(`--- 1i: Workday (${workdayBoards.length} companies) ---`);
+      workdayListings = await ingestFromWorkday(workdayBoards);
+    }
+
+    if (paylocityBoards.length > 0) {
+      logger.info(`--- 1j: Paylocity (${paylocityBoards.length} companies) ---`);
+      paylocityListings = await ingestFromPaylocity(paylocityBoards);
+    }
+
+    if (ultiProBoards.length > 0) {
+      logger.info(`--- 1k: UltiPro (${ultiProBoards.length} companies) ---`);
+      ultiProListings = await ingestFromUltiPro(ultiProBoards);
+    }
+
+    if (icimsCompanies.length > 0) {
+      logger.info(`--- 1l: iCIMS (${icimsCompanies.length} companies) ---`);
+      icimsListings = await ingestFromICIMS(icimsCompanies);
+    }
+
+    if (freshteamBoards.length > 0) {
+      logger.info(`--- 1m: Freshteam (${freshteamBoards.length} companies) ---`);
+      freshteamListings = await ingestFromFreshteam(freshteamBoards);
+    }
+
+    if (jobviteCompanies.length > 0) {
+      logger.info(`--- 1n: Jobvite (${jobviteCompanies.length} companies) ---`);
+      jobviteListings = await ingestFromJobvite(jobviteCompanies);
+    }
+
+    if (triNetHireCompanies.length > 0) {
+      logger.info(`--- 1o: TriNet Hire (${triNetHireCompanies.length} companies) ---`);
+      triNetHireListings = await ingestFromTriNetHire(triNetHireCompanies);
+    }
+
+    // Cross-source dedup (prefer longer descriptions)
+    const allRaw = [
+      ...ghListings,
+      ...leverListings,
+      ...ashbyListings,
+      ...workableListings,
+      ...smartRecruitersListings,
+      ...breezyListings,
+      ...zohoListings,
+      ...jobScoreListings,
+      ...workdayListings,
+      ...paylocityListings,
+      ...ultiProListings,
+      ...icimsListings,
+      ...freshteamListings,
+      ...jobviteListings,
+      ...triNetHireListings,
+    ];
     summary.totalIngested = allRaw.length;
     const rawListings = deduplicateListings(allRaw);
     summary.afterDedup = rawListings.length;

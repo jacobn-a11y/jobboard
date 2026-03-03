@@ -9,7 +9,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "build-firms": "tsx scripts/build-firm-list.ts",
-    "backfill": "tsx scripts/backfill.ts"
+    "backfill": "tsx scripts/backfill.ts",
+    "validate:website-ats": "tsx scripts/validate-website-ats.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
