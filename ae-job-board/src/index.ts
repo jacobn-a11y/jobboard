@@ -33,7 +33,7 @@ import { pushToWebflow, getExistingItems, getExistingSlugs } from "./webflow.ts"
 import { parseLocation } from "./utils/parse-location.ts";
 import { normalizeIndustry, unmatchedIndustries } from "./utils/normalize-industry.ts";
 import { appendRunHistory } from "./utils/run-history.ts";
-import { mapWithConcurrency } from "./utils/concurrency.ts";
+import { mapWithConcurrency, createConcurrencyLimiter } from "./utils/concurrency.ts";
 import type { RunRecord } from "./utils/run-history.ts";
 import type { EnrichedListing, PipelineSummary, RawListing } from "./utils/types.ts";
 
@@ -51,10 +51,16 @@ const parsedEnrichConcurrency = Number(process.env.ENRICH_CONCURRENCY ?? "12");
 const ENRICH_CONCURRENCY = Number.isFinite(parsedEnrichConcurrency) && parsedEnrichConcurrency > 0
   ? Math.floor(parsedEnrichConcurrency)
   : 12;
+const parsedAIConcurrency = Number(process.env.AI_CONCURRENCY ?? "4");
+const AI_CONCURRENCY = Number.isFinite(parsedAIConcurrency) && parsedAIConcurrency > 0
+  ? Math.floor(parsedAIConcurrency)
+  : 4;
+const runAIWithLimit = createConcurrencyLimiter(AI_CONCURRENCY);
 
 if (dryRun) logger.info("DRY RUN MODE — no CMS writes");
 if (skipPdl) logger.info("Skipping PDL enrichment (--skip-pdl)");
 logger.info(`Enrichment concurrency: ${ENRICH_CONCURRENCY}`);
+logger.info(`AI concurrency: ${AI_CONCURRENCY}`);
 
 function canonicalSeedUrl(seedUrl: string): string {
   try {
@@ -491,7 +497,7 @@ async function run(): Promise<void> {
             aiSkippedExisting++;
           } else {
             // 3g: Generate AI content
-            const aiResult = await generateContent(
+            const aiResult = await runAIWithLimit(() => generateContent(
               listing.title,
               listing.company,
               listing.location,
@@ -499,7 +505,7 @@ async function run(): Promise<void> {
               firmMatch,
               enrichment,
               enrRank
-            );
+            ));
             roleSummary = aiResult.roleSummary;
             companyDescription = aiResult.companyDescription;
           }
