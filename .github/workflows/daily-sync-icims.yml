@@ -1,9 +1,9 @@
-name: Daily Job Board Sync
+name: Daily Job Board Sync (iCIMS)
 
 on:
   schedule:
-    # 3 AM EST = 8 AM UTC
-    - cron: '0 8 * * *'
+    # 4:30 AM EST = 9:30 AM UTC
+    - cron: '30 9 * * *'
   workflow_dispatch: # Allow manual triggers
 
 concurrency:
@@ -11,9 +11,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  sync:
+  sync-icims:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 90
     permissions:
       contents: write  # Required for git push in "Commit run history" step
 
@@ -32,7 +32,7 @@ jobs:
         working-directory: ae-job-board
         run: npm ci
 
-      - name: Run pipeline
+      - name: Run iCIMS pipeline
         working-directory: ae-job-board
         env:
           PDL_API_KEY: ${{ secrets.PDL_API_KEY }}
@@ -42,7 +42,7 @@ jobs:
           WEBFLOW_SITE_ID: ${{ secrets.WEBFLOW_SITE_ID }}
           AI_CONCURRENCY: "2"
           ANTHROPIC_REQUESTS_PER_MINUTE: "45"
-          ATS_PROVIDERS: greenhouse,lever,ashby,workable,smartrecruiters,breezy,zoho,jobscore,workday,paylocity,ultipro,freshteam,jobvite,trinethire
+          ATS_PROVIDERS: icims
         run: npx tsx src/index.ts
 
       - name: Commit run history
@@ -51,7 +51,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add ae-job-board/data/run-history.json || true
           if ! git diff --cached --quiet; then
-            git commit -m "Update run history [skip ci]"
+            git commit -m "Update run history (iCIMS) [skip ci]"
             git push
           fi
 
@@ -59,6 +59,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pipeline-logs
+          name: pipeline-logs-icims
           path: ae-job-board/logs/
           retention-days: 14

@@ -101,6 +101,9 @@ Automated pipeline that ingests job listings from **Greenhouse**, **Lever**, and
 | `WEBFLOW_COLLECTION_ID` | Yes | Webflow CMS collection ID (see "Webflow CMS Setup" below) |
 | `WEBFLOW_SITE_ID` | Yes | Webflow Dashboard > Site Settings > General > Site ID |
 | `PDL_API_KEY` | Optional | [People Data Labs](https://www.peopledatalabs.com/) — extra company enrichment. Pipeline works without it. |
+| `ATS_PROVIDERS` | Optional | Comma-separated list to run a subset of sources, e.g. `icims` or `greenhouse,lever,workable` |
+| `AI_CONCURRENCY` | Optional | Max concurrent AI listing generations (default `2`) |
+| `ANTHROPIC_REQUESTS_PER_MINUTE` | Optional | Global Anthropic requests/minute limiter (default `45`) |
 
 ### First-Time ATS Detection
 
@@ -133,6 +136,9 @@ npx tsx src/index.ts --dry-run
 
 # Skip PDL company enrichment (faster, uses seed list data only)
 npx tsx src/index.ts --dry-run --skip-pdl
+
+# Run only iCIMS
+ATS_PROVIDERS=icims npx tsx src/index.ts
 ```
 
 **Always do a `--dry-run` first** to verify output before writing to Webflow.
@@ -147,6 +153,7 @@ npx tsx src/index.ts --dry-run --skip-pdl
 ### GitHub Actions (Recommended for Production)
 
 The workflow at `.github/workflows/daily-sync.yml` runs daily at **3 AM EST** (8 AM UTC).
+Heavy iCIMS ingestion can run separately via `.github/workflows/daily-sync-icims.yml` (scheduled at **4:30 AM EST** / 9:30 AM UTC).
 
 **Setup:**
 
