@@ -5,6 +5,7 @@ import { decodeEntities, extractJobPostingJsonLd, extractMetaContent, htmlToText
 import type { RawListing } from "./utils/types.ts";
 
 const rateLimiter = new RateLimiter(5, 1000, "iCIMS");
+const DETAIL_FETCH_CONCURRENCY = 4;
 
 function buildSearchCandidates(seedUrl: string): string[] {
   const candidates: string[] = [];
@@ -146,6 +147,26 @@ async function fetchICIMSDetail(detailUrl: string, companyName: string): Promise
   };
 }
 
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  worker: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = [];
+  let index = 0;
+
+  const workers = Array.from({ length: Math.max(1, concurrency) }, async () => {
+    while (index < items.length) {
+      const current = index;
+      index += 1;
+      results[current] = await worker(items[current]);
+    }
+  });
+
+  await Promise.all(workers);
+  return results;
+}
+
 export async function fetchICIMSJobs(seedUrl: string, companyName: string): Promise<RawListing[]> {
   const candidates = buildSearchCandidates(seedUrl);
   const detailLinks = new Set<string>();
@@ -170,19 +191,26 @@ export async function fetchICIMSJobs(seedUrl: string, companyName: string): Prom
     detailLinks.add(seedUrl);
   }
 
-  const listings: RawListing[] = [];
-  for (const link of detailLinks) {
-    try {
-      const detail = new URL(link);
-      detail.searchParams.delete("in_iframe");
-      const listing = await fetchICIMSDetail(detail.toString(), companyName);
-      if (listing) listings.push(listing);
-    } catch {
-      // Skip failed detail.
-    }
-  }
+  const normalizedLinks = [...detailLinks].map((link) => {
+    const detail = new URL(link);
+    detail.searchParams.delete("in_iframe");
+    return detail.toString();
+  });
 
-  return listings;
+  const resolved = await mapWithConcurrency(
+    normalizedLinks,
+    DETAIL_FETCH_CONCURRENCY,
+    async (link) => {
+      try {
+        return await fetchICIMSDetail(link, companyName);
+      } catch {
+        // Skip failed detail.
+        return null;
+      }
+    }
+  );
+
+  return resolved.filter((listing): listing is RawListing => Boolean(listing));
 }
 
 export async function ingestFromICIMS(
