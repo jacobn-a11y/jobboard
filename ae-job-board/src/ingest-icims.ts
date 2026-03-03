@@ -6,7 +6,18 @@ import type { RawListing } from "./utils/types.ts";
 
 const rateLimiter = new RateLimiter(5, 1000, "iCIMS");
 const DETAIL_FETCH_CONCURRENCY = 4;
-const MAX_SEARCH_PAGES = 25;
+const parsedMaxSearchPages = Number(process.env.ICIMS_MAX_SEARCH_PAGES ?? (process.env.GITHUB_ACTIONS === "true" ? "12" : "25"));
+const MAX_SEARCH_PAGES = Number.isFinite(parsedMaxSearchPages) && parsedMaxSearchPages > 0
+  ? Math.floor(parsedMaxSearchPages)
+  : 25;
+const parsedCompanyConcurrency = Number(process.env.ICIMS_COMPANY_CONCURRENCY ?? "5");
+const COMPANY_FETCH_CONCURRENCY = Number.isFinite(parsedCompanyConcurrency) && parsedCompanyConcurrency > 0
+  ? Math.floor(parsedCompanyConcurrency)
+  : 5;
+const parsedMaxDetailLinks = Number(process.env.ICIMS_MAX_DETAIL_LINKS ?? (process.env.GITHUB_ACTIONS === "true" ? "80" : "0"));
+const MAX_DETAIL_LINKS = Number.isFinite(parsedMaxDetailLinks) && parsedMaxDetailLinks > 0
+  ? Math.floor(parsedMaxDetailLinks)
+  : 0;
 
 function normalizeSearchUrl(rawUrl: string, expectedHost: string): string | null {
   try {
@@ -262,8 +273,12 @@ export async function fetchICIMSJobs(seedUrl: string, companyName: string): Prom
     return detail.toString();
   });
 
+  const detailLinksToFetch = MAX_DETAIL_LINKS > 0
+    ? normalizedLinks.slice(0, MAX_DETAIL_LINKS)
+    : normalizedLinks;
+
   const resolved = await mapWithConcurrency(
-    normalizedLinks,
+    detailLinksToFetch,
     DETAIL_FETCH_CONCURRENCY,
     async (link) => {
       try {
@@ -282,17 +297,25 @@ export async function ingestFromICIMS(
   companies: Array<{ seedUrl: string; companyName: string }>
 ): Promise<RawListing[]> {
   const listings: RawListing[] = [];
-
-  for (const { seedUrl, companyName } of companies) {
-    try {
-      const jobs = await fetchICIMSJobs(seedUrl, companyName);
-      if (jobs.length > 0) {
-        logger.info(`iCIMS: ${jobs.length} jobs from ${companyName}`);
-        listings.push(...jobs);
+  const groups = await mapWithConcurrency(
+    companies,
+    Math.max(1, COMPANY_FETCH_CONCURRENCY),
+    async ({ seedUrl, companyName }) => {
+      try {
+        const jobs = await fetchICIMSJobs(seedUrl, companyName);
+        if (jobs.length > 0) {
+          logger.info(`iCIMS: ${jobs.length} jobs from ${companyName}`);
+        }
+        return jobs;
+      } catch (err) {
+        logger.error(`iCIMS error for ${companyName} (${seedUrl})`, err);
+        return [] as RawListing[];
       }
-    } catch (err) {
-      logger.error(`iCIMS error for ${companyName} (${seedUrl})`, err);
     }
+  );
+
+  for (const jobs of groups) {
+    listings.push(...jobs);
   }
 
   logger.info(`iCIMS total: ${listings.length} listings from ${companies.length} companies`);

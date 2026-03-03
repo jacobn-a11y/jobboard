@@ -18,7 +18,7 @@ import { ingestFromICIMS } from "./ingest-icims.ts";
 import { ingestFromFreshteam } from "./ingest-freshteam.ts";
 import { ingestFromJobvite } from "./ingest-jobvite.ts";
 import { ingestFromTriNetHire } from "./ingest-trinethire.ts";
-import { deduplicateListings } from "./dedup.ts";
+import { deduplicateListings, deduplicateListingsBySourceUrl } from "./dedup.ts";
 import { loadATSCache, normalizeCacheKey, isCacheValid } from "./utils/ats-cache.ts";
 import { loadWebsiteATSSources } from "./utils/ats-website-scrape-cache.ts";
 import { parseCSV } from "./utils/csv.ts";
@@ -40,15 +40,70 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const CSV_PATH = join(__dirname, "../../AccountsforBoard.csv");
 
 const PRE_AI_SCORE_THRESHOLD = 45;
+const DEFAULT_CI_MAX_FILTERED = 1500;
 
 // ── CLI args ─────────────────────────────────────────────────────────
 
 const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");
 const skipPdl = args.includes("--skip-pdl");
+const maxFilteredForEnrichArg = args.find((arg) => arg.startsWith("--max-filtered-for-enrich="));
+const maxFilteredForEnrichCli = maxFilteredForEnrichArg
+  ? Number(maxFilteredForEnrichArg.split("=")[1])
+  : null;
+const maxFilteredForEnrichEnv = Number(process.env.MAX_FILTERED_FOR_ENRICH ?? "");
+const isCI = process.env.GITHUB_ACTIONS === "true";
+
+const maxFilteredForEnrich = Number.isFinite(maxFilteredForEnrichCli)
+  ? Math.max(0, Math.floor(maxFilteredForEnrichCli ?? 0))
+  : Number.isFinite(maxFilteredForEnrichEnv)
+    ? Math.max(0, Math.floor(maxFilteredForEnrichEnv))
+    : isCI
+      ? DEFAULT_CI_MAX_FILTERED
+      : 0;
 
 if (dryRun) logger.info("DRY RUN MODE — no CMS writes");
 if (skipPdl) logger.info("Skipping PDL enrichment (--skip-pdl)");
+if (maxFilteredForEnrich > 0) {
+  logger.info(`Enrichment cap enabled: max ${maxFilteredForEnrich} listings`);
+}
+
+function canonicalSeedUrl(seedUrl: string): string {
+  try {
+    const parsed = new URL(seedUrl);
+    const pathname = parsed.pathname.replace(/\/+$/, "") || "/";
+    return `${parsed.origin}${pathname}${parsed.search}`;
+  } catch {
+    return seedUrl.trim().toLowerCase();
+  }
+}
+
+function dedupeByKey<T>(
+  items: T[],
+  keyFn: (item: T) => string,
+  label: string
+): T[] {
+  const seen = new Set<string>();
+  const deduped: T[] = [];
+
+  for (const item of items) {
+    const key = keyFn(item).trim().toLowerCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(item);
+  }
+
+  if (items.length !== deduped.length) {
+    logger.info(`${label}: ${items.length} -> ${deduped.length} unique seeds`);
+  }
+
+  return deduped;
+}
+
+function parseIsoDateMs(value: string): number {
+  const ms = new Date(value).getTime();
+  return Number.isNaN(ms) ? 0 : ms;
+}
 
 // ── Main pipeline ────────────────────────────────────────────────────
 
@@ -180,80 +235,147 @@ async function run(): Promise<void> {
       }
     }
 
-    if (ghBoards.length > 0) {
-      logger.info(`--- 1a: Greenhouse (${ghBoards.length} boards) ---`);
-      ghListings = await ingestFromGreenhouse(ghBoards);
+    const ghBoardsUnique = dedupeByKey(ghBoards, (b) => b.boardToken, "Greenhouse seed dedup");
+    const leverCompaniesUnique = dedupeByKey(leverCompanies, (c) => c.companySlug, "Lever seed dedup");
+    const ashbyBoardsUnique = dedupeByKey(ashbyBoards, (b) => b.organization, "Ashby seed dedup");
+    const workableBoardsUnique = dedupeByKey(
+      workableBoards,
+      (b) => b.accountSlug || canonicalSeedUrl(b.seedUrl),
+      "Workable seed dedup"
+    );
+    const smartRecruitersCompaniesUnique = dedupeByKey(
+      smartRecruitersCompanies,
+      (c) => c.companyIdentifier,
+      "SmartRecruiters seed dedup"
+    );
+    const breezyCompaniesUnique = dedupeByKey(breezyCompanies, (c) => c.companySlug, "Breezy seed dedup");
+    const zohoCompaniesUnique = dedupeByKey(
+      zohoCompanies,
+      (c) => c.companySlug || canonicalSeedUrl(c.seedUrl),
+      "Zoho seed dedup"
+    );
+    const jobScoreCompaniesUnique = dedupeByKey(jobScoreCompanies, (c) => c.companySlug, "JobScore seed dedup");
+    const workdayBoardsUnique = dedupeByKey(workdayBoards, (b) => canonicalSeedUrl(b.seedUrl), "Workday seed dedup");
+    const paylocityBoardsUnique = dedupeByKey(paylocityBoards, (b) => canonicalSeedUrl(b.seedUrl), "Paylocity seed dedup");
+    const ultiProBoardsUnique = dedupeByKey(ultiProBoards, (b) => canonicalSeedUrl(b.seedUrl), "UltiPro seed dedup");
+    const icimsCompaniesUnique = dedupeByKey(icimsCompanies, (c) => canonicalSeedUrl(c.seedUrl), "iCIMS seed dedup");
+    const freshteamBoardsUnique = dedupeByKey(freshteamBoards, (b) => canonicalSeedUrl(b.seedUrl), "Freshteam seed dedup");
+    const jobviteCompaniesUnique = dedupeByKey(jobviteCompanies, (c) => canonicalSeedUrl(c.seedUrl), "Jobvite seed dedup");
+    const triNetHireCompaniesUnique = dedupeByKey(
+      triNetHireCompanies,
+      (c) => canonicalSeedUrl(c.seedUrl),
+      "TriNet Hire seed dedup"
+    );
+
+    // Ingest providers in parallel to reduce total wall-clock runtime.
+    const ingestTasks: Array<Promise<void>> = [];
+
+    if (ghBoardsUnique.length > 0) {
+      ingestTasks.push((async () => {
+        logger.info(`--- 1a: Greenhouse (${ghBoardsUnique.length} boards) ---`);
+        ghListings = await ingestFromGreenhouse(ghBoardsUnique);
+      })());
     }
 
-    if (leverCompanies.length > 0) {
-      logger.info(`--- 1b: Lever (${leverCompanies.length} companies) ---`);
-      leverListings = await ingestFromLever(leverCompanies);
+    if (leverCompaniesUnique.length > 0) {
+      ingestTasks.push((async () => {
+        logger.info(`--- 1b: Lever (${leverCompaniesUnique.length} companies) ---`);
+        leverListings = await ingestFromLever(leverCompaniesUnique);
+      })());
     }
 
-    if (ashbyBoards.length > 0) {
-      logger.info(`--- 1c: Ashby (${ashbyBoards.length} boards) ---`);
-      ashbyListings = await ingestFromAshby(ashbyBoards);
+    if (ashbyBoardsUnique.length > 0) {
+      ingestTasks.push((async () => {
+        logger.info(`--- 1c: Ashby (${ashbyBoardsUnique.length} boards) ---`);
+        ashbyListings = await ingestFromAshby(ashbyBoardsUnique);
+      })());
     }
 
-    if (workableBoards.length > 0) {
-      logger.info(`--- 1d: Workable (${workableBoards.length} boards) ---`);
-      workableListings = await ingestFromWorkable(workableBoards);
+    if (workableBoardsUnique.length > 0) {
+      ingestTasks.push((async () => {
+        logger.info(`--- 1d: Workable (${workableBoardsUnique.length} boards) ---`);
+        workableListings = await ingestFromWorkable(workableBoardsUnique);
+      })());
     }
 
-    if (smartRecruitersCompanies.length > 0) {
-      logger.info(`--- 1e: SmartRecruiters (${smartRecruitersCompanies.length} companies) ---`);
-      smartRecruitersListings = await ingestFromSmartRecruiters(smartRecruitersCompanies);
+    if (smartRecruitersCompaniesUnique.length > 0) {
+      ingestTasks.push((async () => {
+        logger.info(`--- 1e: SmartRecruiters (${smartRecruitersCompaniesUnique.length} companies) ---`);
+        smartRecruitersListings = await ingestFromSmartRecruiters(smartRecruitersCompaniesUnique);
+      })());
     }
 
-    if (breezyCompanies.length > 0) {
-      logger.info(`--- 1f: Breezy (${breezyCompanies.length} companies) ---`);
-      breezyListings = await ingestFromBreezy(breezyCompanies);
+    if (breezyCompaniesUnique.length > 0) {
+      ingestTasks.push((async () => {
+        logger.info(`--- 1f: Breezy (${breezyCompaniesUnique.length} companies) ---`);
+        breezyListings = await ingestFromBreezy(breezyCompaniesUnique);
+      })());
     }
 
-    if (zohoCompanies.length > 0) {
-      logger.info(`--- 1g: Zoho Recruit (${zohoCompanies.length} companies) ---`);
-      zohoListings = await ingestFromZoho(zohoCompanies);
+    if (zohoCompaniesUnique.length > 0) {
+      ingestTasks.push((async () => {
+        logger.info(`--- 1g: Zoho Recruit (${zohoCompaniesUnique.length} companies) ---`);
+        zohoListings = await ingestFromZoho(zohoCompaniesUnique);
+      })());
     }
 
-    if (jobScoreCompanies.length > 0) {
-      logger.info(`--- 1h: JobScore (${jobScoreCompanies.length} companies) ---`);
-      jobScoreListings = await ingestFromJobScore(jobScoreCompanies);
+    if (jobScoreCompaniesUnique.length > 0) {
+      ingestTasks.push((async () => {
+        logger.info(`--- 1h: JobScore (${jobScoreCompaniesUnique.length} companies) ---`);
+        jobScoreListings = await ingestFromJobScore(jobScoreCompaniesUnique);
+      })());
     }
 
-    if (workdayBoards.length > 0) {
-      logger.info(`--- 1i: Workday (${workdayBoards.length} companies) ---`);
-      workdayListings = await ingestFromWorkday(workdayBoards);
+    if (workdayBoardsUnique.length > 0) {
+      ingestTasks.push((async () => {
+        logger.info(`--- 1i: Workday (${workdayBoardsUnique.length} companies) ---`);
+        workdayListings = await ingestFromWorkday(workdayBoardsUnique);
+      })());
     }
 
-    if (paylocityBoards.length > 0) {
-      logger.info(`--- 1j: Paylocity (${paylocityBoards.length} companies) ---`);
-      paylocityListings = await ingestFromPaylocity(paylocityBoards);
+    if (paylocityBoardsUnique.length > 0) {
+      ingestTasks.push((async () => {
+        logger.info(`--- 1j: Paylocity (${paylocityBoardsUnique.length} companies) ---`);
+        paylocityListings = await ingestFromPaylocity(paylocityBoardsUnique);
+      })());
     }
 
-    if (ultiProBoards.length > 0) {
-      logger.info(`--- 1k: UltiPro (${ultiProBoards.length} companies) ---`);
-      ultiProListings = await ingestFromUltiPro(ultiProBoards);
+    if (ultiProBoardsUnique.length > 0) {
+      ingestTasks.push((async () => {
+        logger.info(`--- 1k: UltiPro (${ultiProBoardsUnique.length} companies) ---`);
+        ultiProListings = await ingestFromUltiPro(ultiProBoardsUnique);
+      })());
     }
 
-    if (icimsCompanies.length > 0) {
-      logger.info(`--- 1l: iCIMS (${icimsCompanies.length} companies) ---`);
-      icimsListings = await ingestFromICIMS(icimsCompanies);
+    if (icimsCompaniesUnique.length > 0) {
+      ingestTasks.push((async () => {
+        logger.info(`--- 1l: iCIMS (${icimsCompaniesUnique.length} companies) ---`);
+        icimsListings = await ingestFromICIMS(icimsCompaniesUnique);
+      })());
     }
 
-    if (freshteamBoards.length > 0) {
-      logger.info(`--- 1m: Freshteam (${freshteamBoards.length} companies) ---`);
-      freshteamListings = await ingestFromFreshteam(freshteamBoards);
+    if (freshteamBoardsUnique.length > 0) {
+      ingestTasks.push((async () => {
+        logger.info(`--- 1m: Freshteam (${freshteamBoardsUnique.length} companies) ---`);
+        freshteamListings = await ingestFromFreshteam(freshteamBoardsUnique);
+      })());
     }
 
-    if (jobviteCompanies.length > 0) {
-      logger.info(`--- 1n: Jobvite (${jobviteCompanies.length} companies) ---`);
-      jobviteListings = await ingestFromJobvite(jobviteCompanies);
+    if (jobviteCompaniesUnique.length > 0) {
+      ingestTasks.push((async () => {
+        logger.info(`--- 1n: Jobvite (${jobviteCompaniesUnique.length} companies) ---`);
+        jobviteListings = await ingestFromJobvite(jobviteCompaniesUnique);
+      })());
     }
 
-    if (triNetHireCompanies.length > 0) {
-      logger.info(`--- 1o: TriNet Hire (${triNetHireCompanies.length} companies) ---`);
-      triNetHireListings = await ingestFromTriNetHire(triNetHireCompanies);
+    if (triNetHireCompaniesUnique.length > 0) {
+      ingestTasks.push((async () => {
+        logger.info(`--- 1o: TriNet Hire (${triNetHireCompaniesUnique.length} companies) ---`);
+        triNetHireListings = await ingestFromTriNetHire(triNetHireCompaniesUnique);
+      })());
     }
+
+    await Promise.all(ingestTasks);
 
     // Cross-source dedup (prefer longer descriptions)
     const allRaw = [
@@ -274,7 +396,8 @@ async function run(): Promise<void> {
       ...triNetHireListings,
     ];
     summary.totalIngested = allRaw.length;
-    const rawListings = deduplicateListings(allRaw);
+    const crossSourceDeduped = deduplicateListings(allRaw);
+    const rawListings = deduplicateListingsBySourceUrl(crossSourceDeduped);
     summary.afterDedup = rawListings.length;
     logger.info(`Total: ${allRaw.length} raw → ${rawListings.length} after dedup`);
 
@@ -306,18 +429,37 @@ async function run(): Promise<void> {
       }
     }
 
+    let enrichmentQueue = filtered;
+    if (maxFilteredForEnrich > 0 && filtered.length > maxFilteredForEnrich) {
+      const existing = filtered.filter(({ listing }) => existingSourceUrls.has(listing.sourceUrl));
+      const fresh = filtered
+        .filter(({ listing }) => !existingSourceUrls.has(listing.sourceUrl))
+        .sort((a, b) => parseIsoDateMs(b.listing.datePosted) - parseIsoDateMs(a.listing.datePosted));
+
+      const existingSlice = existing.slice(0, maxFilteredForEnrich);
+      const remaining = Math.max(0, maxFilteredForEnrich - existingSlice.length);
+      enrichmentQueue = [...existingSlice, ...fresh.slice(0, remaining)];
+
+      logger.warn(
+        `Capping enrichment workload: ${filtered.length} -> ${enrichmentQueue.length} ` +
+        `(kept ${existingSlice.length} existing Webflow items first)`
+      );
+    }
+
     // ── Step 3: Enrich each listing ──────────────────────────────────
     logger.info("=== Step 3: Enriching listings ===");
     let aiSkippedLowQuality = 0;
     let aiSkippedExisting = 0;
 
-    for (let i = 0; i < filtered.length; i++) {
-      const { listing, roleCategory, firmMatch } = filtered[i];
-      const stepLabel = `[${i + 1}/${filtered.length}]`;
+    for (let i = 0; i < enrichmentQueue.length; i++) {
+      const { listing, roleCategory, firmMatch } = enrichmentQueue[i];
+      const stepLabel = `[${i + 1}/${enrichmentQueue.length}]`;
 
       try {
         // 3a: Company enrichment (skip if --skip-pdl)
-        logger.info(`${stepLabel} Enriching: ${listing.title} at ${listing.company}`);
+        if (i % 25 === 0 || i === enrichmentQueue.length - 1) {
+          logger.info(`${stepLabel} Enriching: ${listing.title} at ${listing.company}`);
+        }
         const enrichment = skipPdl ? null : await enrichCompany(listing.company);
 
         // 3b: ENR rank

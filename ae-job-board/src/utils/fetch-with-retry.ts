@@ -4,6 +4,11 @@
  */
 const DEFAULT_MAX_RETRIES = 3;
 const DEFAULT_INITIAL_DELAY_MS = 1000;
+const parsedTimeoutMs = Number(process.env.HTTP_TIMEOUT_MS ?? "20000");
+const DEFAULT_TIMEOUT_MS =
+  Number.isFinite(parsedTimeoutMs) && parsedTimeoutMs > 0
+    ? Math.floor(parsedTimeoutMs)
+    : 20000;
 
 export async function fetchWithRetry(
   url: string | URL,
@@ -14,8 +19,18 @@ export async function fetchWithRetry(
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
     try {
-      const response = await fetch(url, options);
+      const requestOptions: RequestInit = { ...options };
+
+      if (!requestOptions.signal && DEFAULT_TIMEOUT_MS > 0) {
+        const controller = new AbortController();
+        requestOptions.signal = controller.signal;
+        timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
+      }
+
+      const response = await fetch(url, requestOptions);
+      if (timeoutId) clearTimeout(timeoutId);
 
       // Retry on 5xx or 429
       if (response.status >= 500 || response.status === 429) {
@@ -28,6 +43,7 @@ export async function fetchWithRetry(
 
       return response;
     } catch (err) {
+      if (timeoutId) clearTimeout(timeoutId);
       lastError = err instanceof Error ? err : new Error(String(err));
       if (attempt < maxRetries) {
         const delay = initialDelayMs * Math.pow(2, attempt);

@@ -27,7 +27,7 @@ export class RateLimiter {
       const oldestInWindow = this.timestamps[0];
       const waitTime = this.windowMs - (now - oldestInWindow) + 100; // +100ms buffer
       // Suppress duplicate wait logs from concurrent callers hitting the same limiter.
-      if (now - this.lastWaitLogAt >= 1000) {
+      if (now - this.lastWaitLogAt >= 10000) {
         logger.info(
           `${this.name} rate limit reached, waiting ${Math.ceil(waitTime / 1000)}s`
         );
