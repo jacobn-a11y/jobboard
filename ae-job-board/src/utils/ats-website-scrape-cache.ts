@@ -153,7 +153,7 @@ function extractWorkdaySourceUrl(url: URL): string {
   }
 
   if (!site) return "";
-  return `${url.origin}/${site}`;
+  return `https://${url.host}/${site}`;
 }
 
 function extractPaylocitySourceUrl(url: URL): string {

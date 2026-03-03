@@ -41,7 +41,8 @@ function parseWorkdayBoard(seedUrl: string): WorkdayBoardRef | null {
     if (!tenant) return null;
 
     return {
-      origin: parsed.origin,
+      // Some tenants return HTTP_400 for CXS over http:// but work on https://.
+      origin: `https://${parsed.host}`,
       tenant,
       site,
     };
