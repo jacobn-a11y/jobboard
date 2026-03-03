@@ -24,17 +24,28 @@ export function resetAICounters(): void {
 // ── Role cache (per-listing, no TTL) ──────────────────────────────────
 
 type RoleCache = Record<string, string>;
+let roleCacheLoaded = false;
+let roleCacheStore: RoleCache = {};
 
 function loadRoleCache(): RoleCache {
-  if (!existsSync(ROLE_CACHE_PATH)) return {};
-  try {
-    return JSON.parse(readFileSync(ROLE_CACHE_PATH, "utf-8"));
-  } catch {
-    return {};
+  if (!roleCacheLoaded) {
+    if (!existsSync(ROLE_CACHE_PATH)) {
+      roleCacheStore = {};
+    } else {
+      try {
+        roleCacheStore = JSON.parse(readFileSync(ROLE_CACHE_PATH, "utf-8"));
+      } catch {
+        roleCacheStore = {};
+      }
+    }
+    roleCacheLoaded = true;
   }
+  return roleCacheStore;
 }
 
 function saveRoleCache(cache: RoleCache): void {
+  roleCacheStore = cache;
+  roleCacheLoaded = true;
   writeFileSync(ROLE_CACHE_PATH, JSON.stringify(cache, null, 2));
 }
 
@@ -51,6 +62,8 @@ interface CompanyCacheEntry {
 }
 
 type CompanyCache = Record<string, CompanyCacheEntry>;
+let companyCacheLoaded = false;
+let companyCacheStore: CompanyCache = {};
 
 function normalizeCompanyKey(name: string): string {
   return name
@@ -61,15 +74,24 @@ function normalizeCompanyKey(name: string): string {
 }
 
 function loadCompanyCache(): CompanyCache {
-  if (!existsSync(COMPANY_CACHE_PATH)) return {};
-  try {
-    return JSON.parse(readFileSync(COMPANY_CACHE_PATH, "utf-8"));
-  } catch {
-    return {};
+  if (!companyCacheLoaded) {
+    if (!existsSync(COMPANY_CACHE_PATH)) {
+      companyCacheStore = {};
+    } else {
+      try {
+        companyCacheStore = JSON.parse(readFileSync(COMPANY_CACHE_PATH, "utf-8"));
+      } catch {
+        companyCacheStore = {};
+      }
+    }
+    companyCacheLoaded = true;
   }
+  return companyCacheStore;
 }
 
 function saveCompanyCache(cache: CompanyCache): void {
+  companyCacheStore = cache;
+  companyCacheLoaded = true;
   writeFileSync(COMPANY_CACHE_PATH, JSON.stringify(cache, null, 2));
 }
 
@@ -290,4 +312,3 @@ export async function generateContent(
     return { roleSummary: "", companyDescription: "" };
   }
 }
-

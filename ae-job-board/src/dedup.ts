@@ -25,6 +25,89 @@ function fingerprint(listing: RawListing): string {
   return `${normalize(listing.company)}|${normalize(listing.title)}|${normalize(listing.location)}`;
 }
 
+function normalizeSourceUrl(url: string): string {
+  const trimmed = url.trim();
+  if (!trimmed) return "";
+
+  try {
+    const parsed = new URL(trimmed);
+    parsed.hash = "";
+
+    // Strip known tracking/embed params that do not change posting identity.
+    const removable = [
+      "utm_source",
+      "utm_medium",
+      "utm_campaign",
+      "utm_term",
+      "utm_content",
+      "in_iframe",
+      "source",
+      "ref",
+      "referer",
+      "gh_jid",
+    ];
+    for (const key of removable) {
+      parsed.searchParams.delete(key);
+    }
+
+    const pathname = parsed.pathname.replace(/\/+$/, "") || "/";
+    const search = parsed.searchParams.toString();
+    return `${parsed.origin}${pathname}${search ? `?${search}` : ""}`;
+  } catch {
+    return trimmed.replace(/\/+$/, "");
+  }
+}
+
+function sourceDedupScore(listing: RawListing): number {
+  let score = 0;
+  if (listing.description.trim()) score += Math.min(listing.description.length, 5000);
+  if (listing.location.trim()) score += 25;
+  if (listing.salaryMin !== null) score += 50;
+  if (listing.salaryMax !== null) score += 50;
+  if (listing.contractType) score += 10;
+  if (listing.contractTime) score += 10;
+  return score;
+}
+
+/**
+ * Deduplicate by canonical source URL.
+ *
+ * This catches duplicated ATS mappings where the same posting URL is emitted
+ * under multiple firm aliases.
+ */
+export function deduplicateListingsBySourceUrl(listings: RawListing[]): RawListing[] {
+  const result: RawListing[] = [];
+  const indexByUrl = new Map<string, number>();
+
+  for (const listing of listings) {
+    const urlKey = normalizeSourceUrl(listing.sourceUrl);
+    if (!urlKey) {
+      result.push(listing);
+      continue;
+    }
+
+    const existingIndex = indexByUrl.get(urlKey);
+    if (existingIndex === undefined) {
+      indexByUrl.set(urlKey, result.length);
+      result.push(listing);
+      continue;
+    }
+
+    const existing = result[existingIndex];
+    if (sourceDedupScore(listing) > sourceDedupScore(existing)) {
+      result[existingIndex] = listing;
+    }
+  }
+
+  const before = listings.length;
+  const after = result.length;
+  if (before !== after) {
+    logger.info(`Source URL dedup: ${before} → ${after} listings (${before - after} duplicates removed)`);
+  }
+
+  return result;
+}
+
 export function deduplicateListings(listings: RawListing[]): RawListing[] {
   // Group listings by fingerprint
   const groups = new Map<string, RawListing[]>();

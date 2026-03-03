@@ -19,14 +19,25 @@ const rateLimiter = new RateLimiter(10, 60_000, "PDL");
 // ── Cache ────────────────────────────────────────────────────────────
 
 type EnrichmentCache = Record<string, CompanyEnrichment>;
+const inMemoryResults = new Map<string, CompanyEnrichment | null>();
+const inFlightEnrichment = new Map<string, Promise<CompanyEnrichment | null>>();
+let cacheLoaded = false;
+let cacheStore: EnrichmentCache = {};
 
 function loadCache(): EnrichmentCache {
-  if (!existsSync(CACHE_PATH)) return {};
-  try {
-    return JSON.parse(readFileSync(CACHE_PATH, "utf-8"));
-  } catch {
-    return {};
+  if (!cacheLoaded) {
+    if (!existsSync(CACHE_PATH)) {
+      cacheStore = {};
+    } else {
+      try {
+        cacheStore = JSON.parse(readFileSync(CACHE_PATH, "utf-8"));
+      } catch {
+        cacheStore = {};
+      }
+    }
+    cacheLoaded = true;
   }
+  return cacheStore;
 }
 
 function saveCache(cache: EnrichmentCache): void {
@@ -124,32 +135,52 @@ async function fetchFromPDL(
 export async function enrichCompany(
   companyName: string
 ): Promise<CompanyEnrichment | null> {
-  const cache = loadCache();
   const cacheKey = normalizeName(companyName);
-
-  // Check cache
-  if (cache[cacheKey] && isCacheValid(cache[cacheKey])) {
-    logger.debug(`Enrichment cache hit: ${companyName}`);
-    return cache[cacheKey];
+  if (inMemoryResults.has(cacheKey)) {
+    return inMemoryResults.get(cacheKey) ?? null;
+  }
+  if (inFlightEnrichment.has(cacheKey)) {
+    return inFlightEnrichment.get(cacheKey) ?? null;
   }
 
-  const apiKey = process.env.PDL_API_KEY;
-  if (!apiKey) {
-    logger.debug("PDL_API_KEY not set — skipping enrichment");
-    return null;
-  }
+  const task = (async () => {
+    const cache = loadCache();
 
-  try {
-    const enrichment = await fetchFromPDL(companyName, apiKey);
-    if (enrichment) {
-      cache[cacheKey] = enrichment;
-      saveCache(cache);
-      logger.debug(`Enriched: ${companyName}`);
+    // Check cache
+    if (cache[cacheKey] && isCacheValid(cache[cacheKey])) {
+      logger.debug(`Enrichment cache hit: ${companyName}`);
+      inMemoryResults.set(cacheKey, cache[cacheKey]);
+      return cache[cacheKey];
     }
-    return enrichment;
-  } catch (err) {
-    logger.error(`Enrichment failed for ${companyName}`, err);
-    return null;
+
+    const apiKey = process.env.PDL_API_KEY;
+    if (!apiKey) {
+      logger.debug("PDL_API_KEY not set — skipping enrichment");
+      inMemoryResults.set(cacheKey, null);
+      return null;
+    }
+
+    try {
+      const enrichment = await fetchFromPDL(companyName, apiKey);
+      if (enrichment) {
+        cache[cacheKey] = enrichment;
+        saveCache(cache);
+        logger.debug(`Enriched: ${companyName}`);
+      }
+      inMemoryResults.set(cacheKey, enrichment);
+      return enrichment;
+    } catch (err) {
+      logger.error(`Enrichment failed for ${companyName}`, err);
+      inMemoryResults.set(cacheKey, null);
+      return null;
+    }
+  })();
+
+  inFlightEnrichment.set(cacheKey, task);
+  try {
+    return await task;
+  } finally {
+    inFlightEnrichment.delete(cacheKey);
   }
 }
 
