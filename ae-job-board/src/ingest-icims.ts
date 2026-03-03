@@ -5,39 +5,70 @@ import { decodeEntities, extractJobPostingJsonLd, extractMetaContent, htmlToText
 import type { RawListing } from "./utils/types.ts";
 
 const rateLimiter = new RateLimiter(5, 1000, "iCIMS");
+const DETAIL_FETCH_CONCURRENCY = 4;
+const MAX_SEARCH_PAGES = 25;
 
-function buildSearchCandidates(seedUrl: string): string[] {
+function normalizeSearchUrl(rawUrl: string, expectedHost: string): string | null {
+  try {
+    const parsed = new URL(rawUrl);
+    if (parsed.host !== expectedHost) return null;
+    if (!parsed.pathname.includes("/jobs/search")) return null;
+
+    const normalized = new URL("/jobs/search", `${parsed.protocol}//${parsed.host}`);
+    const allowedParams = ["ss", "pr", "hashed", "in_iframe", "searchRelation"];
+    for (const key of allowedParams) {
+      const value = parsed.searchParams.get(key);
+      if (value !== null && value !== "") {
+        normalized.searchParams.set(key, value);
+      }
+    }
+
+    if (!normalized.searchParams.has("ss") && !normalized.searchParams.has("pr")) {
+      normalized.searchParams.set("ss", "1");
+    }
+    if (normalized.searchParams.has("pr") && !normalized.searchParams.has("in_iframe")) {
+      normalized.searchParams.set("in_iframe", "1");
+    }
+
+    return normalized.toString();
+  } catch {
+    return null;
+  }
+}
+
+function buildSearchCandidates(seedUrl: string): { candidates: string[]; expectedHost: string } {
   const candidates: string[] = [];
+  let expectedHost = "";
 
   try {
     const parsed = new URL(seedUrl);
+    expectedHost = parsed.host;
     const hashed = parsed.searchParams.get("hashed");
 
-    candidates.push(seedUrl);
-
     if (parsed.pathname.includes("/jobs/search")) {
-      const search = new URL(parsed.toString());
-      if (!search.searchParams.get("ss")) search.searchParams.set("ss", "1");
-      candidates.push(search.toString());
+      const normalizedSeed = normalizeSearchUrl(parsed.toString(), parsed.host);
+      if (normalizedSeed) candidates.push(normalizedSeed);
+    }
 
-      const iframe = new URL(search.toString());
-      iframe.searchParams.set("in_iframe", "1");
-      candidates.push(iframe.toString());
-    } else {
-      const search = new URL("/jobs/search", `${parsed.protocol}//${parsed.host}`);
-      search.searchParams.set("ss", "1");
-      if (hashed) search.searchParams.set("hashed", hashed);
-      candidates.push(search.toString());
+    const search = new URL("/jobs/search", `${parsed.protocol}//${parsed.host}`);
+    search.searchParams.set("ss", "1");
+    if (hashed) search.searchParams.set("hashed", hashed);
+    const normalizedSearch = normalizeSearchUrl(search.toString(), parsed.host);
+    if (normalizedSearch) candidates.push(normalizedSearch);
 
-      const iframe = new URL(search.toString());
-      iframe.searchParams.set("in_iframe", "1");
-      candidates.push(iframe.toString());
+    const iframe = new URL(search.toString());
+    iframe.searchParams.set("in_iframe", "1");
+    const normalizedIframe = normalizeSearchUrl(iframe.toString(), parsed.host);
+    if (normalizedIframe) candidates.push(normalizedIframe);
+
+    if (!parsed.pathname.includes("/jobs/search")) {
+      candidates.push(parsed.toString());
     }
   } catch {
     // Ignore malformed seed URL.
   }
 
-  return [...new Set(candidates)];
+  return { candidates: [...new Set(candidates)], expectedHost };
 }
 
 function extractICIMSJobLinks(html: string, baseUrl: string): string[] {
@@ -51,6 +82,29 @@ function extractICIMSJobLinks(html: string, baseUrl: string): string[] {
   for (const match of relative) {
     try {
       links.add(new URL(decodeEntities(match[1]), baseUrl).toString());
+    } catch {
+      // Ignore malformed relative URL.
+    }
+  }
+
+  return [...links];
+}
+
+function extractICIMSSearchLinks(html: string, baseUrl: string, expectedHost: string): string[] {
+  const links = new Set<string>();
+
+  const absolute = [...html.matchAll(/https?:\/\/[^"'\s<]+\/jobs\/search\?[^"'\s<]+/gi)];
+  for (const match of absolute) {
+    const normalized = normalizeSearchUrl(match[0].replace(/&amp;/g, "&"), expectedHost);
+    if (normalized) links.add(normalized);
+  }
+
+  const relative = [...html.matchAll(/href=["'](\/jobs\/search\?[^"']+)["']/gi)];
+  for (const match of relative) {
+    try {
+      const absoluteUrl = new URL(decodeEntities(match[1]), baseUrl).toString();
+      const normalized = normalizeSearchUrl(absoluteUrl, expectedHost);
+      if (normalized) links.add(normalized);
     } catch {
       // Ignore malformed relative URL.
     }
@@ -146,11 +200,37 @@ async function fetchICIMSDetail(detailUrl: string, companyName: string): Promise
   };
 }
 
-export async function fetchICIMSJobs(seedUrl: string, companyName: string): Promise<RawListing[]> {
-  const candidates = buildSearchCandidates(seedUrl);
-  const detailLinks = new Set<string>();
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  worker: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = [];
+  let index = 0;
 
-  for (const candidate of candidates) {
+  const workers = Array.from({ length: Math.max(1, concurrency) }, async () => {
+    while (index < items.length) {
+      const current = index;
+      index += 1;
+      results[current] = await worker(items[current]);
+    }
+  });
+
+  await Promise.all(workers);
+  return results;
+}
+
+export async function fetchICIMSJobs(seedUrl: string, companyName: string): Promise<RawListing[]> {
+  const { candidates, expectedHost } = buildSearchCandidates(seedUrl);
+  const detailLinks = new Set<string>();
+  const visitedSearchPages = new Set<string>();
+  const searchQueue = [...candidates];
+
+  while (searchQueue.length > 0 && visitedSearchPages.size < MAX_SEARCH_PAGES) {
+    const candidate = searchQueue.shift();
+    if (!candidate || visitedSearchPages.has(candidate)) continue;
+    visitedSearchPages.add(candidate);
+
     try {
       await rateLimiter.acquire();
       const response = await fetchWithRetry(candidate, { redirect: "follow" });
@@ -159,6 +239,12 @@ export async function fetchICIMSJobs(seedUrl: string, companyName: string): Prom
       const html = await response.text();
       for (const link of extractICIMSJobLinks(html, response.url)) {
         detailLinks.add(link);
+      }
+
+      for (const searchLink of extractICIMSSearchLinks(html, response.url, expectedHost || new URL(response.url).host)) {
+        if (!visitedSearchPages.has(searchLink)) {
+          searchQueue.push(searchLink);
+        }
       }
     } catch {
       // Try next candidate.
@@ -170,19 +256,26 @@ export async function fetchICIMSJobs(seedUrl: string, companyName: string): Prom
     detailLinks.add(seedUrl);
   }
 
-  const listings: RawListing[] = [];
-  for (const link of detailLinks) {
-    try {
-      const detail = new URL(link);
-      detail.searchParams.delete("in_iframe");
-      const listing = await fetchICIMSDetail(detail.toString(), companyName);
-      if (listing) listings.push(listing);
-    } catch {
-      // Skip failed detail.
-    }
-  }
+  const normalizedLinks = [...detailLinks].map((link) => {
+    const detail = new URL(link);
+    detail.searchParams.delete("in_iframe");
+    return detail.toString();
+  });
 
-  return listings;
+  const resolved = await mapWithConcurrency(
+    normalizedLinks,
+    DETAIL_FETCH_CONCURRENCY,
+    async (link) => {
+      try {
+        return await fetchICIMSDetail(link, companyName);
+      } catch {
+        // Skip failed detail.
+        return null;
+      }
+    }
+  );
+
+  return resolved.filter((listing): listing is RawListing => Boolean(listing));
 }
 
 export async function ingestFromICIMS(
