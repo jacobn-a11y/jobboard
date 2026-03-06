@@ -588,5 +588,175 @@
         "count": 48
       }
     ]
+  },
+  {
+    "timestamp": "2026-03-06T09:15:37.301Z",
+    "durationMs": 1544756,
+    "summary": {
+      "totalIngested": 18473,
+      "afterDedup": 17230,
+      "afterFilter": 2367,
+      "afterQualityFilter": 812,
+      "created": 35,
+      "updated": 777,
+      "expired": 206,
+      "deleted": 180,
+      "skipped": 1555,
+      "errors": 0
+    },
+    "uniqueCompanies": 262,
+    "uniqueStates": [
+      "2116",
+      "AUSTRALIA",
+      "Alabama",
+      "Alaska",
+      "Arizona",
+      "Arkansas",
+      "Australia",
+      "Belgium",
+      "CAN",
+      "California",
+      "Canada",
+      "Colorado",
+      "Connecticut",
+      "Cyprus",
+      "Delaware",
+      "District of Columbia",
+      "Dubai",
+      "Florida",
+      "Georgia",
+      "Hawaii",
+      "INC.",
+      "Idaho",
+      "Illinois",
+      "Inc.",
+      "Inc. - Albuquerque Office",
+      "Inc. - Atlanta Office",
+      "Inc. - Denver Office",
+      "Inc. - Kansas City Office",
+      "Inc. - San Francisco - Larkspur Office",
+      "Inc.-San Francisco-San Mateo Office",
+      "India",
+      "Indiana",
+      "Iowa",
+      "Ireland",
+      "Italy",
+      "JO",
+      "JP",
+      "Jr. Building",
+      "Kansas",
+      "Kentucky",
+      "LLC",
+      "Louisiana",
+      "MG",
+      "Maine",
+      "Manitoba",
+      "Maryland",
+      "Massachusetts",
+      "Metropolitan City of Bologna",
+      "Mexico",
+      "Miami",
+      "Michigan",
+      "Minnesota",
+      "Missouri",
+      "Montana",
+      "NL",
+      "Nebraska",
+      "Netherlands",
+      "Nevada",
+      "New Hampshire",
+      "New Jersey",
+      "New Mexico",
+      "New York",
+      "Norristown",
+      "North Carolina",
+      "North Dakota",
+      "North Holland",
+      "ON",
+      "Ohio",
+      "Oklahoma",
+      "Oman",
+      "Ontario",
+      "Oregon",
+      "Pennsylvania",
+      "Poland",
+      "Rhode Island",
+      "Rockville",
+      "SP",
+      "South Carolina",
+      "South Dakota",
+      "South Korea",
+      "Spain",
+      "São Paulo",
+      "Tampa",
+      "Telangana",
+      "Tennessee",
+      "Texas",
+      "The Netherlands",
+      "UK",
+      "United Kingdom",
+      "Utah",
+      "Vermont",
+      "Virginia",
+      "Washington",
+      "West Palm Beach",
+      "West Virginia",
+      "Wilkes Barre",
+      "Wisconsin",
+      "Wyoming"
+    ],
+    "listingsByCategory": {
+      "operations": 428,
+      "project-management": 1930,
+      "resource-management": 9
+    },
+    "listingsByIndustry": {
+      "Architecture & Engineering": 2367
+    },
+    "unmatchedIndustries": [],
+    "aiCallsMade": 70,
+    "aiCallsSkipped": 18,
+    "topCompanies": [
+      {
+        "name": "GPLA Structural Engineers and Builders",
+        "count": 140
+      },
+      {
+        "name": "ardurra.com",
+        "count": 83
+      },
+      {
+        "name": "Atwell Group",
+        "count": 74
+      },
+      {
+        "name": "Fisher Associates",
+        "count": 72
+      },
+      {
+        "name": "Donald W. McIntosh Associates",
+        "count": 71
+      },
+      {
+        "name": "Partner Engineering",
+        "count": 66
+      },
+      {
+        "name": "Primoris Services Corporation",
+        "count": 56
+      },
+      {
+        "name": "Helix Electric",
+        "count": 52
+      },
+      {
+        "name": "DOWL",
+        "count": 49
+      },
+      {
+        "name": "Olsson",
+        "count": 48
+      }
+    ]
   }
 ]
