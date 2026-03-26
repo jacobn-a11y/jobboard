@@ -5,6 +5,16 @@ import type { EnrichedListing, WebflowCMSItem } from "./utils/types.ts";
 
 const WEBFLOW_API = "https://api.webflow.com/v2";
 
+/** Safety net: ensure URLs pushed to Webflow CMS have a protocol
+ *  so they render as absolute links, not relative paths. */
+function ensureProtocol(url: string): string {
+  if (!url) return "";
+  const trimmed = url.trim();
+  if (!trimmed) return "";
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
+
 // 60 requests per minute
 const rateLimiter = new RateLimiter(58, 60_000, "Webflow"); // 58 to stay safe
 
@@ -61,8 +71,8 @@ function toWebflowItem(listing: EnrichedListing): WebflowCMSItem {
       "enr-rank": listing.enrRank,
       "company-size": listing.firmMatch?.size ?? listing.enrichment?.employeeCount ?? "",
       "company-hq": listing.firmMatch?.hq ?? listing.enrichment?.hq ?? "",
-      "company-website": listing.companyWebsite,
-      "company-linkedin": listing.companyLinkedin,
+      "company-website": ensureProtocol(listing.companyWebsite),
+      "company-linkedin": ensureProtocol(listing.companyLinkedin),
       "company-hq-state": listing.companyHqState,
       industry: listing.industry,
       "job-city": listing.jobCity,

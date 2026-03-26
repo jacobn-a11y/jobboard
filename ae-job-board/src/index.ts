@@ -38,6 +38,18 @@ import type { RunRecord } from "./utils/run-history.ts";
 import type { EnrichedListing, PipelineSummary, RawListing } from "./utils/types.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// ── URL normalization ─────────────────────────────────────────────────
+// Ensures external URLs have a protocol so Webflow renders them as
+// absolute links instead of relative paths (e.g. /jobs/olsson.com → 404).
+
+function normalizeUrl(url: string): string {
+  if (!url) return "";
+  const trimmed = url.trim();
+  if (!trimmed) return "";
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
 const CSV_PATH = join(__dirname, "../../AccountsforBoard.csv");
 
 const PRE_AI_SCORE_THRESHOLD = 45;
@@ -585,8 +597,8 @@ async function run(): Promise<void> {
             salaryMax,
             salaryEstimated,
             firmMatch,
-            companyWebsite: firmMatch?.website ?? "",
-            companyLinkedin: firmMatch?.linkedin ?? "",
+            companyWebsite: normalizeUrl(firmMatch?.website ?? ""),
+            companyLinkedin: normalizeUrl(firmMatch?.linkedin ?? ""),
             enrichment,
             enrRank,
             roleSummary,
