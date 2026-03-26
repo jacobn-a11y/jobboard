@@ -44,6 +44,16 @@ const normalizedFirms = firmList.map((f) => ({
   aliasesNormalized: f.aliases.map(normalizeFirmName),
 }));
 
+// O(1) exact-match indexes (name + aliases) to avoid scanning the full list
+const exactNameIndex = new Map<string, AEFirm>();
+const exactAliasIndex = new Map<string, AEFirm>();
+for (const entry of normalizedFirms) {
+  exactNameIndex.set(entry.normalized, entry.firm);
+  for (const alias of entry.aliasesNormalized) {
+    exactAliasIndex.set(alias, entry.firm);
+  }
+}
+
 // Extra allow-list from website ATS cache (firms discovered there should pass firm gate).
 const websiteATSFirmKeys = loadWebsiteATSSources().allowedFirmKeys;
 
@@ -145,16 +155,14 @@ function matchFirm(
 ): { matched: boolean; firm: AEFirm | null } {
   const normalizedCompany = normalizeFirmName(companyName);
 
-  // Strategy A: Exact or fuzzy match against seed list (any industry)
+  // Strategy A: Exact match via O(1) index lookup
+  const exactName = exactNameIndex.get(normalizedCompany);
+  if (exactName) return { matched: true, firm: exactName };
+  const exactAlias = exactAliasIndex.get(normalizedCompany);
+  if (exactAlias) return { matched: true, firm: exactAlias };
+
+  // Strategy A (fuzzy): Only scan the full list when exact match fails
   for (const entry of normalizedFirms) {
-    if (entry.normalized === normalizedCompany) {
-      return { matched: true, firm: entry.firm };
-    }
-    for (const alias of entry.aliasesNormalized) {
-      if (alias === normalizedCompany) {
-        return { matched: true, firm: entry.firm };
-      }
-    }
     if (similarity(entry.normalized, normalizedCompany) >= 0.85) {
       return { matched: true, firm: entry.firm };
     }
@@ -166,6 +174,13 @@ function matchFirm(
   }
 
   // Strategy B: Check description for industry signals (need 2+)
+  if (!description.trim()) {
+    // Empty descriptions can't be matched by industry signals — skip rather
+    // than silently dropping. Seed-list firms (Strategy A) already returned above.
+    logger.debug(`Firm match: empty description for "${companyName}" — skipping industry signal check`);
+    return { matched: false, firm: null };
+  }
+
   const lower = description.toLowerCase();
   for (const signals of Object.values(industrySignals)) {
     let signalCount = 0;

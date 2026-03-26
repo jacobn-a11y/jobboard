@@ -7,10 +7,15 @@ export async function mapWithConcurrency<T, R>(
   const results = new Array<R>(items.length);
   let nextIndex = 0;
 
+  function claimNext(): number {
+    // Single expression: read and advance atomically within the same
+    // synchronous tick, preventing any interleaving between workers.
+    return nextIndex++;
+  }
+
   const runners = Array.from({ length: safeConcurrency }, async () => {
     while (true) {
-      const current = nextIndex;
-      nextIndex += 1;
+      const current = claimNext();
       if (current >= items.length) return;
 
       results[current] = await worker(items[current], current);

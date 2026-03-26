@@ -9,18 +9,32 @@ import type { CompanyEnrichment, ENRRanking } from "./utils/types.ts";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CACHE_PATH = join(__dirname, "../data/enrichment-cache.json");
 const ENR_PATH = join(__dirname, "../data/enr-rankings.json");
-const CACHE_TTL_DAYS = 30;
+const CACHE_TTL_DAYS = 14;
 
 const PDL_BASE = "https://api.peopledatalabs.com/v5/company/enrich";
 
-// 10 req/min for PDL free tier
+// PDL free tier: 10 req/min. Enrichment concurrency should not exceed this
+// to avoid workers idling on the rate limiter. The pipeline default
+// ENRICH_CONCURRENCY=12 is fine because most calls hit the disk/memory cache
+// and never reach the rate limiter.
 const rateLimiter = new RateLimiter(10, 60_000, "PDL");
 
 // ── Cache ────────────────────────────────────────────────────────────
 
 type EnrichmentCache = Record<string, CompanyEnrichment>;
+const MAX_IN_MEMORY = 5_000;
 const inMemoryResults = new Map<string, CompanyEnrichment | null>();
 const inFlightEnrichment = new Map<string, Promise<CompanyEnrichment | null>>();
+
+function setInMemory(key: string, value: CompanyEnrichment | null): void {
+  // Simple LRU eviction: delete oldest entries when at capacity.
+  // Map iteration order is insertion order, so the first key is the oldest.
+  if (inMemoryResults.size >= MAX_IN_MEMORY) {
+    const oldest = inMemoryResults.keys().next().value;
+    if (oldest !== undefined) inMemoryResults.delete(oldest);
+  }
+  inMemoryResults.set(key, value);
+}
 let cacheLoaded = false;
 let cacheStore: EnrichmentCache = {};
 
@@ -149,14 +163,14 @@ export async function enrichCompany(
     // Check cache
     if (cache[cacheKey] && isCacheValid(cache[cacheKey])) {
       logger.debug(`Enrichment cache hit: ${companyName}`);
-      inMemoryResults.set(cacheKey, cache[cacheKey]);
+      setInMemory(cacheKey, cache[cacheKey]);
       return cache[cacheKey];
     }
 
     const apiKey = process.env.PDL_API_KEY;
     if (!apiKey) {
       logger.debug("PDL_API_KEY not set — skipping enrichment");
-      inMemoryResults.set(cacheKey, null);
+      setInMemory(cacheKey, null);
       return null;
     }
 
@@ -167,11 +181,11 @@ export async function enrichCompany(
         saveCache(cache);
         logger.debug(`Enriched: ${companyName}`);
       }
-      inMemoryResults.set(cacheKey, enrichment);
+      setInMemory(cacheKey, enrichment);
       return enrichment;
     } catch (err) {
       logger.error(`Enrichment failed for ${companyName}`, err);
-      inMemoryResults.set(cacheKey, null);
+      setInMemory(cacheKey, null);
       return null;
     }
   })();

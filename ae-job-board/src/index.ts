@@ -98,10 +98,22 @@ const AI_CONCURRENCY = Number.isFinite(parsedAIConcurrency) && parsedAIConcurren
   : 2;
 const runAIWithLimit = createConcurrencyLimiter(AI_CONCURRENCY);
 
+// ── Early config validation ─────────────────────────────────────────
+// Fail fast if Webflow config is incomplete (unless dry-run)
+if (!dryRun && process.env.WEBFLOW_API_TOKEN && !process.env.WEBFLOW_COLLECTION_ID) {
+  throw new Error(
+    "WEBFLOW_API_TOKEN is set but WEBFLOW_COLLECTION_ID is missing — " +
+    "set it or use --dry-run to skip CMS push"
+  );
+}
+
 if (dryRun) logger.info("DRY RUN MODE — no CMS writes");
 if (skipPdl) logger.info("Skipping PDL enrichment (--skip-pdl)");
 if (unknownProviders.length > 0) {
-  logger.warn(`Ignoring unknown ATS providers in ATS_PROVIDERS: ${unknownProviders.join(", ")}`);
+  throw new Error(
+    `Unknown ATS provider(s) in ATS_PROVIDERS: ${unknownProviders.join(", ")}. ` +
+    `Valid providers: ${ALL_ATS_PROVIDERS.join(", ")}`
+  );
 }
 logger.info(`Enrichment concurrency: ${ENRICH_CONCURRENCY}`);
 logger.info(`AI concurrency: ${AI_CONCURRENCY}`);
@@ -306,114 +318,128 @@ async function run(): Promise<void> {
     );
 
     // Ingest providers in parallel to reduce total wall-clock runtime.
+    // Each provider is wrapped in try/catch so one failure doesn't kill the batch.
     const ingestTasks: Array<Promise<void>> = [];
+    const failedProviders: string[] = [];
+
+    function safeIngest(provider: string, fn: () => Promise<void>): Promise<void> {
+      return fn().catch((err) => {
+        logger.error(`Ingest failed for ${provider} — continuing with other providers`, err);
+        failedProviders.push(provider);
+      });
+    }
 
     if (shouldRunProvider("greenhouse") && ghBoardsUnique.length > 0) {
-      ingestTasks.push((async () => {
+      ingestTasks.push(safeIngest("greenhouse", async () => {
         logger.info(`--- 1a: Greenhouse (${ghBoardsUnique.length} boards) ---`);
         ghListings = await ingestFromGreenhouse(ghBoardsUnique);
-      })());
+      }));
     }
 
     if (shouldRunProvider("lever") && leverCompaniesUnique.length > 0) {
-      ingestTasks.push((async () => {
+      ingestTasks.push(safeIngest("lever", async () => {
         logger.info(`--- 1b: Lever (${leverCompaniesUnique.length} companies) ---`);
         leverListings = await ingestFromLever(leverCompaniesUnique);
-      })());
+      }));
     }
 
     if (shouldRunProvider("ashby") && ashbyBoardsUnique.length > 0) {
-      ingestTasks.push((async () => {
+      ingestTasks.push(safeIngest("ashby", async () => {
         logger.info(`--- 1c: Ashby (${ashbyBoardsUnique.length} boards) ---`);
         ashbyListings = await ingestFromAshby(ashbyBoardsUnique);
-      })());
+      }));
     }
 
     if (shouldRunProvider("workable") && workableBoardsUnique.length > 0) {
-      ingestTasks.push((async () => {
+      ingestTasks.push(safeIngest("workable", async () => {
         logger.info(`--- 1d: Workable (${workableBoardsUnique.length} boards) ---`);
         workableListings = await ingestFromWorkable(workableBoardsUnique);
-      })());
+      }));
     }
 
     if (shouldRunProvider("smartrecruiters") && smartRecruitersCompaniesUnique.length > 0) {
-      ingestTasks.push((async () => {
+      ingestTasks.push(safeIngest("smartrecruiters", async () => {
         logger.info(`--- 1e: SmartRecruiters (${smartRecruitersCompaniesUnique.length} companies) ---`);
         smartRecruitersListings = await ingestFromSmartRecruiters(smartRecruitersCompaniesUnique);
-      })());
+      }));
     }
 
     if (shouldRunProvider("breezy") && breezyCompaniesUnique.length > 0) {
-      ingestTasks.push((async () => {
+      ingestTasks.push(safeIngest("breezy", async () => {
         logger.info(`--- 1f: Breezy (${breezyCompaniesUnique.length} companies) ---`);
         breezyListings = await ingestFromBreezy(breezyCompaniesUnique);
-      })());
+      }));
     }
 
     if (shouldRunProvider("zoho") && zohoCompaniesUnique.length > 0) {
-      ingestTasks.push((async () => {
+      ingestTasks.push(safeIngest("zoho", async () => {
         logger.info(`--- 1g: Zoho Recruit (${zohoCompaniesUnique.length} companies) ---`);
         zohoListings = await ingestFromZoho(zohoCompaniesUnique);
-      })());
+      }));
     }
 
     if (shouldRunProvider("jobscore") && jobScoreCompaniesUnique.length > 0) {
-      ingestTasks.push((async () => {
+      ingestTasks.push(safeIngest("jobscore", async () => {
         logger.info(`--- 1h: JobScore (${jobScoreCompaniesUnique.length} companies) ---`);
         jobScoreListings = await ingestFromJobScore(jobScoreCompaniesUnique);
-      })());
+      }));
     }
 
     if (shouldRunProvider("workday") && workdayBoardsUnique.length > 0) {
-      ingestTasks.push((async () => {
+      ingestTasks.push(safeIngest("workday", async () => {
         logger.info(`--- 1i: Workday (${workdayBoardsUnique.length} companies) ---`);
         workdayListings = await ingestFromWorkday(workdayBoardsUnique);
-      })());
+      }));
     }
 
     if (shouldRunProvider("paylocity") && paylocityBoardsUnique.length > 0) {
-      ingestTasks.push((async () => {
+      ingestTasks.push(safeIngest("paylocity", async () => {
         logger.info(`--- 1j: Paylocity (${paylocityBoardsUnique.length} companies) ---`);
         paylocityListings = await ingestFromPaylocity(paylocityBoardsUnique);
-      })());
+      }));
     }
 
     if (shouldRunProvider("ultipro") && ultiProBoardsUnique.length > 0) {
-      ingestTasks.push((async () => {
+      ingestTasks.push(safeIngest("ultipro", async () => {
         logger.info(`--- 1k: UltiPro (${ultiProBoardsUnique.length} companies) ---`);
         ultiProListings = await ingestFromUltiPro(ultiProBoardsUnique);
-      })());
+      }));
     }
 
     if (shouldRunProvider("icims") && icimsCompaniesUnique.length > 0) {
-      ingestTasks.push((async () => {
+      ingestTasks.push(safeIngest("icims", async () => {
         logger.info(`--- 1l: iCIMS (${icimsCompaniesUnique.length} companies) ---`);
         icimsListings = await ingestFromICIMS(icimsCompaniesUnique);
-      })());
+      }));
     }
 
     if (shouldRunProvider("freshteam") && freshteamBoardsUnique.length > 0) {
-      ingestTasks.push((async () => {
+      ingestTasks.push(safeIngest("freshteam", async () => {
         logger.info(`--- 1m: Freshteam (${freshteamBoardsUnique.length} companies) ---`);
         freshteamListings = await ingestFromFreshteam(freshteamBoardsUnique);
-      })());
+      }));
     }
 
     if (shouldRunProvider("jobvite") && jobviteCompaniesUnique.length > 0) {
-      ingestTasks.push((async () => {
+      ingestTasks.push(safeIngest("jobvite", async () => {
         logger.info(`--- 1n: Jobvite (${jobviteCompaniesUnique.length} companies) ---`);
         jobviteListings = await ingestFromJobvite(jobviteCompaniesUnique);
-      })());
+      }));
     }
 
     if (shouldRunProvider("trinethire") && triNetHireCompaniesUnique.length > 0) {
-      ingestTasks.push((async () => {
+      ingestTasks.push(safeIngest("trinethire", async () => {
         logger.info(`--- 1o: TriNet Hire (${triNetHireCompaniesUnique.length} companies) ---`);
         triNetHireListings = await ingestFromTriNetHire(triNetHireCompaniesUnique);
-      })());
+      }));
     }
 
     await Promise.all(ingestTasks);
+
+    if (failedProviders.length > 0) {
+      logger.warn(`${failedProviders.length} provider(s) failed: ${failedProviders.join(", ")}`);
+      summary.errors += failedProviders.length;
+    }
 
     // Cross-source dedup (prefer longer descriptions)
     const allRaw = [
@@ -494,7 +520,7 @@ async function run(): Promise<void> {
           let salaryMax = listing.salaryMax;
           let salaryEstimated = listing.salaryIsPredicted;
 
-          if (!salaryMin || !salaryMax) {
+          if (salaryMin == null || salaryMax == null) {
             const estimate = estimateSalary(
               listing.title,
               listing.location,
@@ -654,6 +680,11 @@ async function run(): Promise<void> {
     }
 
     const finalSlugs = deduplicateSlugs(rawSlugs, existingSlugs);
+    if (finalSlugs.length !== enrichedListings.length) {
+      throw new Error(
+        `Slug deduplication mismatch: ${finalSlugs.length} slugs for ${enrichedListings.length} listings`
+      );
+    }
     for (let i = 0; i < enrichedListings.length; i++) {
       enrichedListings[i].slug = finalSlugs[i];
     }
