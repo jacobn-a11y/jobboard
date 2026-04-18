@@ -4628,5 +4628,149 @@
         "count": 48
       }
     ]
+  },
+  {
+    "timestamp": "2026-04-18T09:23:09.757Z",
+    "durationMs": 1419370,
+    "summary": {
+      "totalIngested": 8593,
+      "afterDedup": 8185,
+      "afterFilter": 1537,
+      "afterQualityFilter": 305,
+      "created": 107,
+      "updated": 198,
+      "expired": 140,
+      "deleted": 116,
+      "skipped": 1232,
+      "errors": 0
+    },
+    "uniqueCompanies": 147,
+    "uniqueStates": [
+      "AB",
+      "Alabama",
+      "Alaska",
+      "Arizona",
+      "Arkansas",
+      "CAN",
+      "California",
+      "Canada",
+      "Colorado",
+      "Connecticut",
+      "Delaware",
+      "District of Columbia",
+      "Dubai",
+      "Florida",
+      "Georgia",
+      "Hawaii",
+      "INC.",
+      "Idaho",
+      "Illinois",
+      "Inc. - Albuquerque Office",
+      "Inc. - Atlanta Office",
+      "Inc. - Denver Office",
+      "Inc. - Kansas City Office",
+      "Indiana",
+      "Iowa",
+      "JO",
+      "Kentucky",
+      "LLC",
+      "LLC.",
+      "Louisiana",
+      "Maine",
+      "Manitoba",
+      "Maryland",
+      "Massachusetts",
+      "Metropolitan City of Bologna",
+      "Miami",
+      "Michigan",
+      "Minnesota",
+      "Mississippi",
+      "Missouri",
+      "Montana",
+      "Nevada",
+      "New Hampshire",
+      "New Jersey",
+      "New Mexico",
+      "New York",
+      "Norristown",
+      "North Carolina",
+      "North Dakota",
+      "North Holland",
+      "ON",
+      "Ohio",
+      "Oklahoma",
+      "Ontario",
+      "Oregon",
+      "Pennsylvania",
+      "Rockville",
+      "South Carolina",
+      "South Dakota",
+      "Tampa",
+      "Telangana",
+      "Tennessee",
+      "Texas",
+      "Utah",
+      "Vermont",
+      "Virginia",
+      "Washington",
+      "West Palm Beach",
+      "West Virginia",
+      "Wilkes Barre",
+      "Wisconsin",
+      "Wyoming"
+    ],
+    "listingsByCategory": {
+      "project-management": 1325,
+      "operations": 207,
+      "resource-management": 5
+    },
+    "listingsByIndustry": {
+      "Architecture & Engineering": 1537
+    },
+    "unmatchedIndustries": [],
+    "aiCallsMade": 98,
+    "aiCallsSkipped": 64,
+    "topCompanies": [
+      {
+        "name": "ardurra.com",
+        "count": 89
+      },
+      {
+        "name": "Fisher Associates",
+        "count": 70
+      },
+      {
+        "name": "Donald W. McIntosh Associates",
+        "count": 67
+      },
+      {
+        "name": "Primoris Services Corporation",
+        "count": 64
+      },
+      {
+        "name": "Partner Engineering",
+        "count": 61
+      },
+      {
+        "name": "Helix Electric",
+        "count": 51
+      },
+      {
+        "name": "McKim & Creed",
+        "count": 49
+      },
+      {
+        "name": "MD Design",
+        "count": 49
+      },
+      {
+        "name": "LaBella Associates, D.P.C.",
+        "count": 48
+      },
+      {
+        "name": "DOWL",
+        "count": 45
+      }
+    ]
   }
 ]
