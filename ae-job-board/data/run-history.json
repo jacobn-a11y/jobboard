@@ -7003,5 +7003,156 @@
         "count": 45
       }
     ]
+  },
+  {
+    "timestamp": "2026-05-04T10:42:14.713Z",
+    "durationMs": 1322016,
+    "summary": {
+      "totalIngested": 10905,
+      "afterDedup": 10452,
+      "afterFilter": 1892,
+      "afterQualityFilter": 312,
+      "created": 105,
+      "updated": 207,
+      "expired": 160,
+      "deleted": 111,
+      "skipped": 1580,
+      "errors": 0
+    },
+    "uniqueCompanies": 170,
+    "uniqueStates": [
+      "AB",
+      "Alabama",
+      "Alaska",
+      "Alberta",
+      "Aomori",
+      "Arizona",
+      "Arkansas",
+      "Brazil",
+      "CAN",
+      "California",
+      "Canada",
+      "Colorado",
+      "Connecticut",
+      "Delaware",
+      "District of Columbia",
+      "Dubai",
+      "ET",
+      "Florida",
+      "Georgia",
+      "Germany",
+      "Guam",
+      "Hawaii",
+      "INC.",
+      "Idaho",
+      "Illinois",
+      "Inc. - Albuquerque Office",
+      "Inc. - Atlanta Office",
+      "Inc. - Denver Office",
+      "Inc. - Kansas City Office",
+      "Indiana",
+      "Iowa",
+      "Kansas",
+      "Kentucky",
+      "LLC",
+      "LLC.",
+      "Louisiana",
+      "Maine",
+      "Manitoba",
+      "Maryland",
+      "Massachusetts",
+      "Metropolitan City of Bologna",
+      "Miami",
+      "Michigan",
+      "Minnesota",
+      "Mississippi",
+      "Missouri",
+      "Montana",
+      "Municipality of Vigo",
+      "Nevada",
+      "New Hampshire",
+      "New Jersey",
+      "New Mexico",
+      "New York",
+      "North Carolina",
+      "North Dakota",
+      "North Holland",
+      "ON",
+      "Ohio",
+      "Oklahoma",
+      "Ontario",
+      "Oregon",
+      "PL",
+      "Pennsylvania",
+      "Rockville",
+      "Serbia",
+      "South Carolina",
+      "South Dakota",
+      "Tampa",
+      "Tennessee",
+      "Texas",
+      "UK",
+      "Utah",
+      "Vermont",
+      "Virginia",
+      "Washington",
+      "West Palm Beach",
+      "West Virginia",
+      "Wisconsin",
+      "Wyoming"
+    ],
+    "listingsByCategory": {
+      "project-management": 1623,
+      "operations": 268,
+      "resource-management": 1
+    },
+    "listingsByIndustry": {
+      "Architecture & Engineering": 1892
+    },
+    "unmatchedIndustries": [],
+    "aiCallsMade": 89,
+    "aiCallsSkipped": 63,
+    "topCompanies": [
+      {
+        "name": "GPLA Structural Engineers and Builders",
+        "count": 150
+      },
+      {
+        "name": "ardurra.com",
+        "count": 87
+      },
+      {
+        "name": "Fisher Associates",
+        "count": 70
+      },
+      {
+        "name": "Partner Engineering",
+        "count": 66
+      },
+      {
+        "name": "Donald W. McIntosh Associates",
+        "count": 63
+      },
+      {
+        "name": "Primoris Services Corporation",
+        "count": 61
+      },
+      {
+        "name": "Helix Electric",
+        "count": 53
+      },
+      {
+        "name": "LaBella Associates, D.P.C.",
+        "count": 48
+      },
+      {
+        "name": "DOWL",
+        "count": 47
+      },
+      {
+        "name": "McKim & Creed",
+        "count": 45
+      }
+    ]
   }
 ]
