@@ -8786,5 +8786,150 @@
         "count": 48
       }
     ]
+  },
+  {
+    "timestamp": "2026-05-16T10:02:55.759Z",
+    "durationMs": 950789,
+    "summary": {
+      "totalIngested": 8379,
+      "afterDedup": 7909,
+      "afterFilter": 1521,
+      "afterQualityFilter": 325,
+      "created": 124,
+      "updated": 200,
+      "expired": 164,
+      "deleted": 131,
+      "skipped": 1196,
+      "errors": 0
+    },
+    "uniqueCompanies": 134,
+    "uniqueStates": [
+      "AB",
+      "AU",
+      "Alabama",
+      "Alaska",
+      "Alberta",
+      "Aomori",
+      "Arizona",
+      "Arkansas",
+      "Australia",
+      "British Columbia",
+      "CAN",
+      "California",
+      "Canada",
+      "Colorado",
+      "Connecticut",
+      "Delaware",
+      "District of Columbia",
+      "ET",
+      "Florida",
+      "Georgia",
+      "Hawaii",
+      "Idaho",
+      "Illinois",
+      "Inc. - Albuquerque Office",
+      "Inc. - Atlanta Office",
+      "Inc. - Denver Office",
+      "Inc. - Kansas City Office",
+      "Indiana",
+      "Iowa",
+      "Kentucky",
+      "LLC",
+      "LLC.",
+      "Louisiana",
+      "Maine",
+      "Manitoba",
+      "Maryland",
+      "Massachusetts",
+      "Metropolitan City of Bologna",
+      "Metropolitan City of Rome Capital",
+      "Miami",
+      "Michigan",
+      "Minnesota",
+      "Missouri",
+      "Montana",
+      "Municipality of Vigo",
+      "Nevada",
+      "New Hampshire",
+      "New Jersey",
+      "New Mexico",
+      "New York",
+      "North Carolina",
+      "North Holland",
+      "ON",
+      "Ohio",
+      "Oklahoma",
+      "Ontario",
+      "Oregon",
+      "Pennsylvania",
+      "Rockville",
+      "South Carolina",
+      "South Dakota",
+      "Tampa",
+      "Tennessee",
+      "Texas",
+      "UK",
+      "Utah",
+      "Vermont",
+      "Virginia",
+      "Washington",
+      "West Palm Beach",
+      "West Virginia",
+      "Wyoming",
+      "current and upcoming opportunities for West Coast and Pacific Region"
+    ],
+    "listingsByCategory": {
+      "project-management": 1291,
+      "operations": 229,
+      "resource-management": 1
+    },
+    "listingsByIndustry": {
+      "Architecture & Engineering": 1521
+    },
+    "unmatchedIndustries": [],
+    "aiCallsMade": 100,
+    "aiCallsSkipped": 72,
+    "topCompanies": [
+      {
+        "name": "ardurra.com",
+        "count": 94
+      },
+      {
+        "name": "Primoris Services Corporation",
+        "count": 72
+      },
+      {
+        "name": "Partner Engineering",
+        "count": 71
+      },
+      {
+        "name": "Donald W. McIntosh Associates",
+        "count": 69
+      },
+      {
+        "name": "Fisher Associates",
+        "count": 57
+      },
+      {
+        "name": "MD Design",
+        "count": 53
+      },
+      {
+        "name": "Helix Electric",
+        "count": 52
+      },
+      {
+        "name": "DOWL",
+        "count": 50
+      },
+      {
+        "name": "McKim & Creed",
+        "count": 49
+      },
+      {
+        "name": "KPFF Consulting Engineers Iowa",
+        "count": 47
+      }
+    ]
   }
 ]
