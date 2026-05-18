@@ -9079,5 +9079,153 @@
         "count": 49
       }
     ]
+  },
+  {
+    "timestamp": "2026-05-18T12:05:57.620Z",
+    "durationMs": 962329,
+    "summary": {
+      "totalIngested": 10847,
+      "afterDedup": 10377,
+      "afterFilter": 1916,
+      "afterQualityFilter": 329,
+      "created": 122,
+      "updated": 207,
+      "expired": 172,
+      "deleted": 123,
+      "skipped": 1587,
+      "errors": 0
+    },
+    "uniqueCompanies": 171,
+    "uniqueStates": [
+      "AB",
+      "AU",
+      "Alabama",
+      "Alaska",
+      "Alberta",
+      "Aomori",
+      "Arizona",
+      "Arkansas",
+      "Australia",
+      "British Columbia",
+      "CAN",
+      "California",
+      "Canada",
+      "Colorado",
+      "Connecticut",
+      "Delaware",
+      "District of Columbia",
+      "ET",
+      "Florida",
+      "Georgia",
+      "Hawaii",
+      "Idaho",
+      "Illinois",
+      "Inc. - Albuquerque Office",
+      "Inc. - Atlanta Office",
+      "Inc. - Denver Office",
+      "Inc. - Kansas City Office",
+      "Indiana",
+      "Iowa",
+      "Jr. Building",
+      "Kentucky",
+      "LLC",
+      "LLC.",
+      "Louisiana",
+      "Maine",
+      "Manitoba",
+      "Maryland",
+      "Massachusetts",
+      "Metropolitan City of Bologna",
+      "Metropolitan City of Rome Capital",
+      "Miami",
+      "Michigan",
+      "Minnesota",
+      "Missouri",
+      "Montana",
+      "Municipality of Vigo",
+      "Nevada",
+      "New Hampshire",
+      "New Jersey",
+      "New Mexico",
+      "New York",
+      "North Carolina",
+      "North Holland",
+      "ON",
+      "Ohio",
+      "Oklahoma",
+      "Ontario",
+      "Oregon",
+      "Pennsylvania",
+      "Rockville",
+      "Serbia",
+      "South Carolina",
+      "South Dakota",
+      "Tampa",
+      "Tennessee",
+      "Texas",
+      "UK",
+      "Utah",
+      "Vermont",
+      "Virginia",
+      "Washington",
+      "West Palm Beach",
+      "West Virginia",
+      "Wisconsin",
+      "Wyoming",
+      "current and upcoming opportunities for West Coast and Pacific Region"
+    ],
+    "listingsByCategory": {
+      "project-management": 1616,
+      "operations": 299,
+      "resource-management": 1
+    },
+    "listingsByIndustry": {
+      "Architecture & Engineering": 1916
+    },
+    "unmatchedIndustries": [],
+    "aiCallsMade": 98,
+    "aiCallsSkipped": 72,
+    "topCompanies": [
+      {
+        "name": "GPLA Structural Engineers and Builders",
+        "count": 123
+      },
+      {
+        "name": "ardurra.com",
+        "count": 94
+      },
+      {
+        "name": "Primoris Services Corporation",
+        "count": 72
+      },
+      {
+        "name": "Partner Engineering",
+        "count": 71
+      },
+      {
+        "name": "Donald W. McIntosh Associates",
+        "count": 69
+      },
+      {
+        "name": "Fisher Associates",
+        "count": 57
+      },
+      {
+        "name": "Helix Electric",
+        "count": 52
+      },
+      {
+        "name": "MD Design",
+        "count": 51
+      },
+      {
+        "name": "DOWL",
+        "count": 50
+      },
+      {
+        "name": "McKim & Creed",
+        "count": 49
+      }
+    ]
   }
 ]
