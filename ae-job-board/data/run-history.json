@@ -9521,5 +9521,152 @@
         "count": 48
       }
     ]
+  },
+  {
+    "timestamp": "2026-05-21T11:47:44.963Z",
+    "durationMs": 931677,
+    "summary": {
+      "totalIngested": 10835,
+      "afterDedup": 10355,
+      "afterFilter": 1932,
+      "afterQualityFilter": 326,
+      "created": 131,
+      "updated": 195,
+      "expired": 170,
+      "deleted": 130,
+      "skipped": 1606,
+      "errors": 0
+    },
+    "uniqueCompanies": 169,
+    "uniqueStates": [
+      "AB",
+      "AU",
+      "Alabama",
+      "Alaska",
+      "Alberta",
+      "Aomori",
+      "Arizona",
+      "Arkansas",
+      "Australia",
+      "British Columbia",
+      "CAN",
+      "California",
+      "Canada",
+      "Colorado",
+      "Connecticut",
+      "Delaware",
+      "District of Columbia",
+      "Florida",
+      "Georgia",
+      "Hawaii",
+      "Idaho",
+      "Illinois",
+      "Inc. - Albuquerque Office",
+      "Inc. - Atlanta Office",
+      "Inc. - Denver Office",
+      "Inc. - Kansas City Office",
+      "Indiana",
+      "Iowa",
+      "Jr. Building",
+      "Kansas",
+      "Kentucky",
+      "LLC",
+      "LLC.",
+      "Louisiana",
+      "Maine",
+      "Manitoba",
+      "Maryland",
+      "Massachusetts",
+      "Metropolitan City of Bologna",
+      "Metropolitan City of Rome Capital",
+      "Miami",
+      "Michigan",
+      "Minnesota",
+      "Missouri",
+      "Montana",
+      "Municipality of Vigo",
+      "Nevada",
+      "New Hampshire",
+      "New Jersey",
+      "New Mexico",
+      "New York",
+      "North Carolina",
+      "North Holland",
+      "ON",
+      "Ohio",
+      "Oklahoma",
+      "Ontario",
+      "Oregon",
+      "Pennsylvania",
+      "Rockville",
+      "Serbia",
+      "South Carolina",
+      "South Dakota",
+      "Tampa",
+      "Tennessee",
+      "Texas",
+      "UK",
+      "Utah",
+      "Vermont",
+      "Virginia",
+      "Washington",
+      "West Palm Beach",
+      "Wisconsin",
+      "Wyoming",
+      "current and upcoming opportunities for West Coast and Pacific Region"
+    ],
+    "listingsByCategory": {
+      "project-management": 1637,
+      "operations": 292,
+      "resource-management": 3
+    },
+    "listingsByIndustry": {
+      "Architecture & Engineering": 1932
+    },
+    "unmatchedIndustries": [],
+    "aiCallsMade": 0,
+    "aiCallsSkipped": 0,
+    "topCompanies": [
+      {
+        "name": "GPLA Structural Engineers and Builders",
+        "count": 122
+      },
+      {
+        "name": "ardurra.com",
+        "count": 92
+      },
+      {
+        "name": "Donald W. McIntosh Associates",
+        "count": 71
+      },
+      {
+        "name": "Primoris Services Corporation",
+        "count": 68
+      },
+      {
+        "name": "Partner Engineering",
+        "count": 63
+      },
+      {
+        "name": "Fisher Associates",
+        "count": 55
+      },
+      {
+        "name": "MD Design",
+        "count": 52
+      },
+      {
+        "name": "Ryan",
+        "count": 51
+      },
+      {
+        "name": "DOWL",
+        "count": 51
+      },
+      {
+        "name": "Helix Electric",
+        "count": 51
+      }
+    ]
   }
 ]
