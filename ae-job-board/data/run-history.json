@@ -12497,5 +12497,139 @@
         "count": 46
       }
     ]
+  },
+  {
+    "timestamp": "2026-06-12T12:11:58.109Z",
+    "durationMs": 1380462,
+    "summary": {
+      "totalIngested": 9000,
+      "afterDedup": 8488,
+      "afterFilter": 1474,
+      "afterQualityFilter": 335,
+      "created": 145,
+      "updated": 190,
+      "expired": 181,
+      "deleted": 148,
+      "skipped": 1139,
+      "errors": 0
+    },
+    "uniqueCompanies": 115,
+    "uniqueStates": [
+      "AB",
+      "AU",
+      "Alabama",
+      "Alaska",
+      "Alberta",
+      "Aomori",
+      "Arizona",
+      "Australia",
+      "British Columbia",
+      "CAN",
+      "California",
+      "Canada",
+      "Colorado",
+      "Connecticut",
+      "Delaware",
+      "Denmark",
+      "Dubai",
+      "Florida",
+      "Georgia",
+      "Idaho",
+      "Illinios",
+      "Illinois",
+      "Indiana",
+      "Iowa",
+      "Kansas",
+      "Kentucky",
+      "Louisiana",
+      "Maine",
+      "Manitoba",
+      "Maryland",
+      "Massachusetts",
+      "Metropolitan City of Rome Capital",
+      "Michigan",
+      "Minnesota",
+      "Missouri",
+      "Montana",
+      "Municipality of Vigo",
+      "Nevada",
+      "New Hampshire",
+      "New Jersey",
+      "New Mexico",
+      "New York",
+      "North Carolina",
+      "North Dakota",
+      "Nova Scotia",
+      "ON",
+      "Ohio",
+      "Oklahoma",
+      "Ontario",
+      "Oregon",
+      "Pennsylvania",
+      "Rockville",
+      "South Carolina",
+      "South Dakota",
+      "Telangana",
+      "Tennessee",
+      "Texas",
+      "UK",
+      "Utah",
+      "Virginia",
+      "Washington",
+      "Wisconsin"
+    ],
+    "listingsByCategory": {
+      "project-management": 1229,
+      "operations": 242,
+      "resource-management": 3
+    },
+    "listingsByIndustry": {
+      "Architecture & Engineering": 1474
+    },
+    "unmatchedIndustries": [],
+    "aiCallsMade": 0,
+    "aiCallsSkipped": 0,
+    "topCompanies": [
+      {
+        "name": "GPLA Structural Engineers and Builders",
+        "count": 117
+      },
+      {
+        "name": "ardurra.com",
+        "count": 96
+      },
+      {
+        "name": "Donald W. McIntosh Associates",
+        "count": 69
+      },
+      {
+        "name": "Partner Engineering",
+        "count": 63
+      },
+      {
+        "name": "DOWL",
+        "count": 54
+      },
+      {
+        "name": "Ryan",
+        "count": 53
+      },
+      {
+        "name": "MD Design",
+        "count": 50
+      },
+      {
+        "name": "KPFF Consulting Engineers Iowa",
+        "count": 49
+      },
+      {
+        "name": "LaBella Associates, D.P.C.",
+        "count": 46
+      },
+      {
+        "name": "Primoris Services Corporation",
+        "count": 46
+      }
+    ]
   }
 ]
