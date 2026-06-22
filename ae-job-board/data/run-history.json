@@ -13969,5 +13969,154 @@
         "count": 44
       }
     ]
+  },
+  {
+    "timestamp": "2026-06-22T13:56:53.022Z",
+    "durationMs": 992266,
+    "summary": {
+      "totalIngested": 10574,
+      "afterDedup": 10077,
+      "afterFilter": 1823,
+      "afterQualityFilter": 332,
+      "created": 142,
+      "updated": 190,
+      "expired": 178,
+      "deleted": 143,
+      "skipped": 1491,
+      "errors": 0
+    },
+    "uniqueCompanies": 173,
+    "uniqueStates": [
+      "AB",
+      "AU",
+      "Alabama",
+      "Alaska",
+      "Alberta",
+      "Aomori",
+      "Arizona",
+      "Australia",
+      "British Columbia",
+      "CAN",
+      "California",
+      "Canada",
+      "Chihuahua",
+      "Colorado",
+      "Connecticut",
+      "Delaware",
+      "District of Columbia",
+      "Dubai",
+      "Florida",
+      "Georgia",
+      "Idaho",
+      "Illinios",
+      "Illinois",
+      "Inc.",
+      "Inc. - Albuquerque Office",
+      "Inc. - Atlanta Office",
+      "Inc. - Denver Office",
+      "Inc. - Fort Collins Office",
+      "Inc. - Kansas City Office",
+      "Indiana",
+      "Iowa",
+      "Kansas",
+      "Kentucky",
+      "LLC",
+      "LLC.",
+      "Louisiana",
+      "Maine",
+      "Manitoba",
+      "Maryland",
+      "Massachusetts",
+      "Metropolitan City of Rome Capital",
+      "Miami",
+      "Michigan",
+      "Minnesota",
+      "Missouri",
+      "Montana",
+      "Municipality of Vigo",
+      "Nevada",
+      "New Hampshire",
+      "New Jersey",
+      "New Mexico",
+      "New York",
+      "North Carolina",
+      "North Dakota",
+      "Nova Scotia",
+      "ON",
+      "Ohio",
+      "Oklahoma",
+      "Ontario",
+      "Oregon",
+      "Pennsylvania",
+      "Rockville",
+      "South Carolina",
+      "South Dakota",
+      "Tampa",
+      "Telangana",
+      "Tennessee",
+      "Texas",
+      "UK",
+      "Utah",
+      "Vermont",
+      "Virginia",
+      "Washington",
+      "West Palm Beach",
+      "Wisconsin",
+      "Wyoming",
+      "current and upcoming opportunities for West Coast and Pacific Region"
+    ],
+    "listingsByCategory": {
+      "operations": 259,
+      "project-management": 1562,
+      "resource-management": 2
+    },
+    "listingsByIndustry": {
+      "Architecture & Engineering": 1823
+    },
+    "unmatchedIndustries": [],
+    "aiCallsMade": 106,
+    "aiCallsSkipped": 82,
+    "topCompanies": [
+      {
+        "name": "GPLA Structural Engineers and Builders",
+        "count": 125
+      },
+      {
+        "name": "ardurra.com",
+        "count": 97
+      },
+      {
+        "name": "Donald W. McIntosh Associates",
+        "count": 66
+      },
+      {
+        "name": "Partner Engineering",
+        "count": 66
+      },
+      {
+        "name": "DOWL",
+        "count": 54
+      },
+      {
+        "name": "KPFF Consulting Engineers Iowa",
+        "count": 51
+      },
+      {
+        "name": "Ryan",
+        "count": 48
+      },
+      {
+        "name": "McKim & Creed",
+        "count": 47
+      },
+      {
+        "name": "MD Design",
+        "count": 45
+      },
+      {
+        "name": "Bkf Engineers",
+        "count": 44
+      }
+    ]
   }
 ]
