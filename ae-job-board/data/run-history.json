@@ -15436,5 +15436,143 @@
         "count": 47
       }
     ]
+  },
+  {
+    "timestamp": "2026-07-02T11:06:09.841Z",
+    "durationMs": 1124200,
+    "summary": {
+      "totalIngested": 9725,
+      "afterDedup": 9224,
+      "afterFilter": 1657,
+      "afterQualityFilter": 325,
+      "created": 150,
+      "updated": 175,
+      "expired": 176,
+      "deleted": 151,
+      "skipped": 1332,
+      "errors": 0
+    },
+    "uniqueCompanies": 145,
+    "uniqueStates": [
+      "AB",
+      "AU",
+      "Alabama",
+      "Alaska",
+      "Alberta",
+      "Arizona",
+      "Australia",
+      "British Columbia",
+      "CAN",
+      "California",
+      "Canada",
+      "Colorado",
+      "Connecticut",
+      "Delaware",
+      "District of Columbia",
+      "Florida",
+      "Georgia",
+      "Idaho",
+      "Illinios",
+      "Illinois",
+      "Inc.",
+      "Indiana",
+      "Iowa",
+      "Kansas",
+      "Kentucky",
+      "LLC",
+      "LLC.",
+      "Louisiana",
+      "Maine",
+      "Manitoba",
+      "Maryland",
+      "Massachusetts",
+      "Metropolitan City of Rome Capital",
+      "Michigan",
+      "Minnesota",
+      "Missouri",
+      "Montana",
+      "Municipality of Vigo",
+      "Nebraska",
+      "Nevada",
+      "New Hampshire",
+      "New Jersey",
+      "New Mexico",
+      "New York",
+      "North Carolina",
+      "North Dakota",
+      "ON",
+      "Ohio",
+      "Oklahoma",
+      "Ontario",
+      "Oregon",
+      "Pennsylvania",
+      "Rockville",
+      "South Carolina",
+      "South Dakota",
+      "Telangana",
+      "Tennessee",
+      "Texas",
+      "UK",
+      "United Kingdom",
+      "Utah",
+      "Virginia",
+      "Washington",
+      "Wisconsin",
+      "Wyoming",
+      "current and upcoming opportunities for West Coast and Pacific Region"
+    ],
+    "listingsByCategory": {
+      "operations": 250,
+      "project-management": 1403,
+      "resource-management": 4
+    },
+    "listingsByIndustry": {
+      "Architecture & Engineering": 1657
+    },
+    "unmatchedIndustries": [],
+    "aiCallsMade": 113,
+    "aiCallsSkipped": 93,
+    "topCompanies": [
+      {
+        "name": "GPLA Structural Engineers and Builders",
+        "count": 130
+      },
+      {
+        "name": "ardurra.com",
+        "count": 94
+      },
+      {
+        "name": "Donald W. McIntosh Associates",
+        "count": 65
+      },
+      {
+        "name": "Partner Engineering",
+        "count": 65
+      },
+      {
+        "name": "DOWL",
+        "count": 56
+      },
+      {
+        "name": "KPFF Consulting Engineers Iowa",
+        "count": 55
+      },
+      {
+        "name": "Ryan",
+        "count": 50
+      },
+      {
+        "name": "LaBella Associates, D.P.C.",
+        "count": 49
+      },
+      {
+        "name": "McKim & Creed",
+        "count": 49
+      },
+      {
+        "name": "MD Design",
+        "count": 49
+      }
+    ]
   }
 ]
