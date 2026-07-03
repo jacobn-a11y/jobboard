@@ -15574,5 +15574,151 @@
         "count": 49
       }
     ]
+  },
+  {
+    "timestamp": "2026-07-03T11:02:31.435Z",
+    "durationMs": 1062416,
+    "summary": {
+      "totalIngested": 10094,
+      "afterDedup": 9608,
+      "afterFilter": 1764,
+      "afterQualityFilter": 331,
+      "created": 152,
+      "updated": 179,
+      "expired": 173,
+      "deleted": 147,
+      "skipped": 1433,
+      "errors": 0
+    },
+    "uniqueCompanies": 164,
+    "uniqueStates": [
+      "AB",
+      "AU",
+      "Alabama",
+      "Alaska",
+      "Alberta",
+      "Arizona",
+      "Australia",
+      "CAN",
+      "California",
+      "Canada",
+      "Chihuahua",
+      "Colorado",
+      "Connecticut",
+      "Delaware",
+      "District of Columbia",
+      "Florida",
+      "Georgia",
+      "Idaho",
+      "Illinios",
+      "Illinois",
+      "Inc.",
+      "Inc. - Albuquerque Office",
+      "Inc. - Atlanta Office",
+      "Inc. - Denver Office",
+      "Inc. - Fort Collins Office",
+      "Inc. - Kansas City Office",
+      "Indiana",
+      "Iowa",
+      "Kansas",
+      "Kentucky",
+      "LLC",
+      "LLC.",
+      "Louisiana",
+      "Maine",
+      "Manitoba",
+      "Maryland",
+      "Massachusetts",
+      "Metropolitan City of Rome Capital",
+      "Miami",
+      "Michigan",
+      "Minnesota",
+      "Missouri",
+      "Montana",
+      "Municipality of Vigo",
+      "Nebraska",
+      "Nevada",
+      "New Hampshire",
+      "New Jersey",
+      "New Mexico",
+      "New York",
+      "North Carolina",
+      "North Dakota",
+      "ON",
+      "Ohio",
+      "Oklahoma",
+      "Ontario",
+      "Oregon",
+      "Pennsylvania",
+      "Rockville",
+      "South Carolina",
+      "South Dakota",
+      "Tampa",
+      "Telangana",
+      "Tennessee",
+      "Texas",
+      "UK",
+      "United Kingdom",
+      "Utah",
+      "Virginia",
+      "Washington",
+      "West Palm Beach",
+      "Wisconsin",
+      "Wyoming",
+      "current and upcoming opportunities for West Coast and Pacific Region"
+    ],
+    "listingsByCategory": {
+      "operations": 256,
+      "project-management": 1504,
+      "resource-management": 4
+    },
+    "listingsByIndustry": {
+      "Architecture & Engineering": 1764
+    },
+    "unmatchedIndustries": [],
+    "aiCallsMade": 112,
+    "aiCallsSkipped": 102,
+    "topCompanies": [
+      {
+        "name": "GPLA Structural Engineers and Builders",
+        "count": 132
+      },
+      {
+        "name": "ardurra.com",
+        "count": 94
+      },
+      {
+        "name": "Partner Engineering",
+        "count": 67
+      },
+      {
+        "name": "Donald W. McIntosh Associates",
+        "count": 65
+      },
+      {
+        "name": "KPFF Consulting Engineers Iowa",
+        "count": 58
+      },
+      {
+        "name": "DOWL",
+        "count": 56
+      },
+      {
+        "name": "Ryan",
+        "count": 51
+      },
+      {
+        "name": "LaBella Associates, D.P.C.",
+        "count": 49
+      },
+      {
+        "name": "McKim & Creed",
+        "count": 49
+      },
+      {
+        "name": "MD Design",
+        "count": 49
+      }
+    ]
   }
 ]
