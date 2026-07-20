@@ -17863,5 +17863,143 @@
         "count": 46
       }
     ]
+  },
+  {
+    "timestamp": "2026-07-20T11:24:13.518Z",
+    "durationMs": 1003179,
+    "summary": {
+      "totalIngested": 9645,
+      "afterDedup": 9151,
+      "afterFilter": 1682,
+      "afterQualityFilter": 326,
+      "created": 148,
+      "updated": 178,
+      "expired": 177,
+      "deleted": 150,
+      "skipped": 1356,
+      "errors": 0
+    },
+    "uniqueCompanies": 155,
+    "uniqueStates": [
+      "AB",
+      "AU",
+      "Alabama",
+      "Alaska",
+      "Alberta",
+      "Arizona",
+      "Australia",
+      "CAN",
+      "California",
+      "Canada",
+      "Chihuahua",
+      "Colorado",
+      "Connecticut",
+      "Delaware",
+      "Florida",
+      "Georgia",
+      "Germany",
+      "Hawaii",
+      "Idaho",
+      "Illinios",
+      "Illinois",
+      "Indiana",
+      "Iowa",
+      "JO",
+      "Kentucky",
+      "LLC",
+      "Louisiana",
+      "Maine",
+      "Manitoba",
+      "Maryland",
+      "Massachusetts",
+      "Miami",
+      "Michigan",
+      "Minnesota",
+      "Missouri",
+      "Montana",
+      "Municipality of Vigo",
+      "Nevada",
+      "New Hampshire",
+      "New Jersey",
+      "New Mexico",
+      "New York",
+      "North Carolina",
+      "North Dakota",
+      "ON",
+      "Ohio",
+      "Oklahoma",
+      "Ontario",
+      "Oregon",
+      "PL",
+      "Pennsylvania",
+      "Rockville",
+      "South Africa",
+      "South Carolina",
+      "South Dakota",
+      "Tampa",
+      "Telangana",
+      "Tennessee",
+      "Texas",
+      "Utah",
+      "Vermont",
+      "Virginia",
+      "Washington",
+      "West Palm Beach",
+      "Wisconsin",
+      "Wyoming"
+    ],
+    "listingsByCategory": {
+      "operations": 262,
+      "project-management": 1413,
+      "resource-management": 7
+    },
+    "listingsByIndustry": {
+      "Architecture & Engineering": 1682
+    },
+    "unmatchedIndustries": [],
+    "aiCallsMade": 0,
+    "aiCallsSkipped": 0,
+    "topCompanies": [
+      {
+        "name": "GPLA Structural Engineers and Builders",
+        "count": 139
+      },
+      {
+        "name": "ardurra.com",
+        "count": 94
+      },
+      {
+        "name": "Donald W. McIntosh Associates",
+        "count": 70
+      },
+      {
+        "name": "Partner Engineering",
+        "count": 67
+      },
+      {
+        "name": "DOWL",
+        "count": 56
+      },
+      {
+        "name": "KPFF Consulting Engineers Iowa",
+        "count": 55
+      },
+      {
+        "name": "Ryan",
+        "count": 51
+      },
+      {
+        "name": "MD Design",
+        "count": 49
+      },
+      {
+        "name": "LaBella Associates, D.P.C.",
+        "count": 47
+      },
+      {
+        "name": "Salas O'Brien",
+        "count": 46
+      }
+    ]
   }
 ]
