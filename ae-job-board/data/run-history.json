@@ -18998,5 +18998,138 @@
         "count": 46
       }
     ]
+  },
+  {
+    "timestamp": "2026-07-28T10:59:33.210Z",
+    "durationMs": 1089204,
+    "summary": {
+      "totalIngested": 9474,
+      "afterDedup": 8934,
+      "afterFilter": 1569,
+      "afterQualityFilter": 335,
+      "created": 151,
+      "updated": 184,
+      "expired": 178,
+      "deleted": 149,
+      "skipped": 1234,
+      "errors": 0
+    },
+    "uniqueCompanies": 136,
+    "uniqueStates": [
+      "AU",
+      "Alabama",
+      "Alaska",
+      "Alberta",
+      "Arizona",
+      "Australia",
+      "CAN",
+      "California",
+      "Canada",
+      "Colorado",
+      "Connecticut",
+      "Delaware",
+      "Florida",
+      "Georgia",
+      "Germany",
+      "Hawaii",
+      "Idaho",
+      "Illinios",
+      "Illinois",
+      "Indiana",
+      "Iowa",
+      "JO",
+      "Jr. Building",
+      "Kansas",
+      "Kentucky",
+      "LLC.",
+      "Louisiana",
+      "Maine",
+      "Maryland",
+      "Massachusetts",
+      "Michigan",
+      "Minnesota",
+      "Missouri",
+      "Montana",
+      "Municipality of Vigo",
+      "Nebraska",
+      "Nevada",
+      "New Hampshire",
+      "New Jersey",
+      "New Mexico",
+      "New York",
+      "North Carolina",
+      "ON",
+      "Ohio",
+      "Oklahoma",
+      "Ontario",
+      "Oregon",
+      "Pennsylvania",
+      "Rockville",
+      "South Africa",
+      "South Carolina",
+      "South Dakota",
+      "Telangana",
+      "Tennessee",
+      "Texas",
+      "Utah",
+      "Vermont",
+      "Virginia",
+      "Washington",
+      "Wisconsin",
+      "Wyoming"
+    ],
+    "listingsByCategory": {
+      "operations": 264,
+      "project-management": 1302,
+      "resource-management": 3
+    },
+    "listingsByIndustry": {
+      "Architecture & Engineering": 1569
+    },
+    "unmatchedIndustries": [],
+    "aiCallsMade": 0,
+    "aiCallsSkipped": 0,
+    "topCompanies": [
+      {
+        "name": "GPLA Structural Engineers and Builders",
+        "count": 132
+      },
+      {
+        "name": "ardurra.com",
+        "count": 93
+      },
+      {
+        "name": "Partner Engineering",
+        "count": 66
+      },
+      {
+        "name": "Donald W. McIntosh Associates",
+        "count": 65
+      },
+      {
+        "name": "Ryan",
+        "count": 55
+      },
+      {
+        "name": "DOWL",
+        "count": 54
+      },
+      {
+        "name": "KPFF Consulting Engineers Iowa",
+        "count": 52
+      },
+      {
+        "name": "LaBella Associates, D.P.C.",
+        "count": 50
+      },
+      {
+        "name": "MD Design",
+        "count": 49
+      },
+      {
+        "name": "Bkf Engineers",
+        "count": 47
+      }
+    ]
   }
 ]
