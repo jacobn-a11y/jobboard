@@ -22840,5 +22840,151 @@
         "count": 43
       }
     ]
+  },
+  {
+    "timestamp": "2026-08-24T09:10:49.288Z",
+    "durationMs": 913830,
+    "summary": {
+      "totalIngested": 10042,
+      "afterDedup": 9503,
+      "afterFilter": 1759,
+      "afterQualityFilter": 319,
+      "created": 134,
+      "updated": 185,
+      "expired": 183,
+      "deleted": 135,
+      "skipped": 1440,
+      "errors": 0
+    },
+    "uniqueCompanies": 166,
+    "uniqueStates": [
+      "Alabama",
+      "Alaska",
+      "Alberta",
+      "Arizona",
+      "Australia",
+      "CAN",
+      "California",
+      "Canada",
+      "Chihuahua",
+      "Colorado",
+      "Connecticut",
+      "Delaware",
+      "District of Columbia",
+      "Florida",
+      "Georgia",
+      "Germany",
+      "Hawaii",
+      "Idaho",
+      "Illinois",
+      "Inc.",
+      "Inc. - Albuquerque Office",
+      "Inc. - Atlanta Office",
+      "Inc. - Denver Office",
+      "Inc. - Fort Collins Office",
+      "Inc. - Kansas City Office",
+      "Inc. - San Francisco - Larkspur Office",
+      "Inc.-San Francisco-San Mateo Office",
+      "Indiana",
+      "Iowa",
+      "JO",
+      "Jacksonville",
+      "Jr. Building",
+      "Kansas",
+      "Kentucky",
+      "LLC",
+      "Louisiana",
+      "Maine",
+      "Maryland",
+      "Massachusetts",
+      "Metropolitan City of Rome Capital",
+      "Miami",
+      "Michigan",
+      "Minnesota",
+      "Mississippi",
+      "Missouri",
+      "Montana",
+      "Municipality of Vigo",
+      "Nebraska",
+      "Nevada",
+      "New Hampshire",
+      "New Jersey",
+      "New Mexico",
+      "New York",
+      "North Carolina",
+      "ON",
+      "Ohio",
+      "Oklahoma",
+      "Ontario",
+      "Oregon",
+      "Pennsylvania",
+      "Rhode Island",
+      "Rockville",
+      "South Carolina",
+      "South Dakota",
+      "Tennessee",
+      "Texas",
+      "Utah",
+      "Vermont",
+      "Virginia",
+      "Washington",
+      "West Palm Beach",
+      "Wisconsin",
+      "Wyoming",
+      "current and upcoming opportunities for West Coast and Pacific Region"
+    ],
+    "listingsByCategory": {
+      "operations": 267,
+      "project-management": 1488,
+      "resource-management": 4
+    },
+    "listingsByIndustry": {
+      "Architecture & Engineering": 1759
+    },
+    "unmatchedIndustries": [],
+    "aiCallsMade": 0,
+    "aiCallsSkipped": 0,
+    "topCompanies": [
+      {
+        "name": "ardurra.com",
+        "count": 96
+      },
+      {
+        "name": "Donald W. McIntosh Associates",
+        "count": 72
+      },
+      {
+        "name": "Ryan",
+        "count": 69
+      },
+      {
+        "name": "Partner Engineering",
+        "count": 63
+      },
+      {
+        "name": "MD Design",
+        "count": 60
+      },
+      {
+        "name": "KPFF Consulting Engineers Iowa",
+        "count": 52
+      },
+      {
+        "name": "DOWL",
+        "count": 52
+      },
+      {
+        "name": "Salas O'Brien",
+        "count": 51
+      },
+      {
+        "name": "LaBella Associates, D.P.C.",
+        "count": 48
+      },
+      {
+        "name": "Bkf Engineers",
+        "count": 43
+      }
+    ]
   }
 ]
