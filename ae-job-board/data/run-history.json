@@ -24411,5 +24411,149 @@
         "count": 46
       }
     ]
+  },
+  {
+    "timestamp": "2026-09-04T12:53:07.265Z",
+    "durationMs": 876490,
+    "summary": {
+      "totalIngested": 10567,
+      "afterDedup": 10031,
+      "afterFilter": 1820,
+      "afterQualityFilter": 324,
+      "created": 138,
+      "updated": 186,
+      "expired": 178,
+      "deleted": 136,
+      "skipped": 1496,
+      "errors": 0
+    },
+    "uniqueCompanies": 167,
+    "uniqueStates": [
+      "Alabama",
+      "Alaska",
+      "Alberta",
+      "Arizona",
+      "Australia",
+      "CAN",
+      "California",
+      "Canada",
+      "Chihuahua",
+      "Colorado",
+      "Connecticut",
+      "Delaware",
+      "District of Columbia",
+      "Florida",
+      "Georgia",
+      "Hawaii",
+      "Idaho",
+      "Illinois",
+      "Inc.",
+      "Inc. - Albuquerque Office",
+      "Inc. - Atlanta Office",
+      "Inc. - Denver Office",
+      "Inc. - Kansas City Office",
+      "Inc. - San Francisco - Larkspur Office",
+      "Inc.-San Francisco-San Mateo Office",
+      "Indiana",
+      "Iowa",
+      "Jacksonville",
+      "Jr. Building",
+      "Kansas",
+      "Kentucky",
+      "LLC",
+      "Louisiana",
+      "Maine",
+      "Maryland",
+      "Massachusetts",
+      "Metropolitan City of Rome Capital",
+      "Miami",
+      "Michigan",
+      "Minnesota",
+      "Missouri",
+      "Montana",
+      "Nebraska",
+      "Nevada",
+      "New Hampshire",
+      "New Jersey",
+      "New Mexico",
+      "New York",
+      "North Carolina",
+      "Nova Scotia",
+      "ON",
+      "Ohio",
+      "Oklahoma",
+      "Ontario",
+      "Oregon",
+      "Pennsylvania",
+      "South Carolina",
+      "South Dakota",
+      "Taiwan",
+      "Tennessee",
+      "Texas",
+      "Titusville",
+      "Tokyo",
+      "Utah",
+      "Vermont",
+      "Virginia",
+      "Washington",
+      "West Palm Beach",
+      "West Virginia",
+      "Wisconsin",
+      "Wyoming",
+      "current and upcoming opportunities for West Coast and Pacific Region"
+    ],
+    "listingsByCategory": {
+      "operations": 280,
+      "project-management": 1537,
+      "resource-management": 3
+    },
+    "listingsByIndustry": {
+      "Architecture & Engineering": 1820
+    },
+    "unmatchedIndustries": [],
+    "aiCallsMade": 0,
+    "aiCallsSkipped": 0,
+    "topCompanies": [
+      {
+        "name": "ardurra.com",
+        "count": 93
+      },
+      {
+        "name": "Ryan",
+        "count": 82
+      },
+      {
+        "name": "Donald W. McIntosh Associates",
+        "count": 76
+      },
+      {
+        "name": "GPLA Structural Engineers and Builders",
+        "count": 69
+      },
+      {
+        "name": "Partner Engineering",
+        "count": 61
+      },
+      {
+        "name": "MD Design",
+        "count": 51
+      },
+      {
+        "name": "DOWL",
+        "count": 50
+      },
+      {
+        "name": "LaBella Associates, D.P.C.",
+        "count": 48
+      },
+      {
+        "name": "KPFF Consulting Engineers Iowa",
+        "count": 47
+      },
+      {
+        "name": "Bkf Engineers",
+        "count": 46
+      }
+    ]
   }
 ]
