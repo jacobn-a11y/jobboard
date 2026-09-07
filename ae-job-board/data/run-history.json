@@ -24830,5 +24830,138 @@
         "count": 46
       }
     ]
+  },
+  {
+    "timestamp": "2026-09-07T14:25:30.855Z",
+    "durationMs": 944645,
+    "summary": {
+      "totalIngested": 9726,
+      "afterDedup": 9233,
+      "afterFilter": 1643,
+      "afterQualityFilter": 323,
+      "created": 136,
+      "updated": 187,
+      "expired": 178,
+      "deleted": 138,
+      "skipped": 1320,
+      "errors": 0
+    },
+    "uniqueCompanies": 138,
+    "uniqueStates": [
+      "AU",
+      "Alabama",
+      "Alaska",
+      "Alberta",
+      "Arizona",
+      "Australia",
+      "CAN",
+      "California",
+      "Canada",
+      "Chihuahua",
+      "Colorado",
+      "Connecticut",
+      "Delaware",
+      "District of Columbia",
+      "Florida",
+      "Georgia",
+      "Hawaii",
+      "Idaho",
+      "Illinois",
+      "Inc.",
+      "Indiana",
+      "Iowa",
+      "Jr. Building",
+      "Kansas",
+      "Kentucky",
+      "LLC",
+      "Louisiana",
+      "Maine",
+      "Maryland",
+      "Massachusetts",
+      "Metropolitan City of Rome Capital",
+      "Michigan",
+      "Minnesota",
+      "Missouri",
+      "Montana",
+      "Nebraska",
+      "Nevada",
+      "New Hampshire",
+      "New Jersey",
+      "New Mexico",
+      "New York",
+      "North Carolina",
+      "Nova Scotia",
+      "ON",
+      "Ohio",
+      "Oklahoma",
+      "Ontario",
+      "Oregon",
+      "Pennsylvania",
+      "South Carolina",
+      "South Dakota",
+      "Tennessee",
+      "Texas",
+      "Tokyo",
+      "Utah",
+      "Virginia",
+      "Washington",
+      "West Virginia",
+      "Wisconsin",
+      "Wyoming",
+      "current and upcoming opportunities for West Coast and Pacific Region"
+    ],
+    "listingsByCategory": {
+      "operations": 269,
+      "project-management": 1371,
+      "resource-management": 3
+    },
+    "listingsByIndustry": {
+      "Architecture & Engineering": 1643
+    },
+    "unmatchedIndustries": [],
+    "aiCallsMade": 0,
+    "aiCallsSkipped": 0,
+    "topCompanies": [
+      {
+        "name": "ardurra.com",
+        "count": 92
+      },
+      {
+        "name": "Ryan",
+        "count": 84
+      },
+      {
+        "name": "Donald W. McIntosh Associates",
+        "count": 77
+      },
+      {
+        "name": "GPLA Structural Engineers and Builders",
+        "count": 76
+      },
+      {
+        "name": "Partner Engineering",
+        "count": 61
+      },
+      {
+        "name": "MD Design",
+        "count": 51
+      },
+      {
+        "name": "DOWL",
+        "count": 50
+      },
+      {
+        "name": "Bkf Engineers",
+        "count": 48
+      },
+      {
+        "name": "LaBella Associates, D.P.C.",
+        "count": 48
+      },
+      {
+        "name": "KPFF Consulting Engineers Iowa",
+        "count": 46
+      }
+    ]
   }
 ]
