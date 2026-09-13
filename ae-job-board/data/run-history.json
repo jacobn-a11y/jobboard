@@ -25682,5 +25682,144 @@
         "count": 44
       }
     ]
+  },
+  {
+    "timestamp": "2026-09-13T13:29:39.300Z",
+    "durationMs": 899418,
+    "summary": {
+      "totalIngested": 10318,
+      "afterDedup": 9828,
+      "afterFilter": 1737,
+      "afterQualityFilter": 324,
+      "created": 137,
+      "updated": 187,
+      "expired": 179,
+      "deleted": 138,
+      "skipped": 1413,
+      "errors": 0
+    },
+    "uniqueCompanies": 158,
+    "uniqueStates": [
+      "AU",
+      "Alabama",
+      "Alaska",
+      "Alberta",
+      "Arizona",
+      "Australia",
+      "CAN",
+      "California",
+      "Canada",
+      "Colorado",
+      "Connecticut",
+      "Delaware",
+      "Denmark",
+      "District of Columbia",
+      "Florida",
+      "Georgia",
+      "Hawaii",
+      "Idaho",
+      "Illinois",
+      "Inc.",
+      "Indiana",
+      "Iowa",
+      "Jacksonville",
+      "Jr. Building",
+      "Kansas",
+      "Kentucky",
+      "LLC",
+      "Louisiana",
+      "Maine",
+      "Maryland",
+      "Massachusetts",
+      "Metropolitan City of Rome Capital",
+      "Miami",
+      "Michigan",
+      "Minnesota",
+      "Mississippi",
+      "Missouri",
+      "Montana",
+      "Nebraska",
+      "Nevada",
+      "New Hampshire",
+      "New Jersey",
+      "New Mexico",
+      "New York",
+      "North Carolina",
+      "Nova Scotia",
+      "ON",
+      "Ohio",
+      "Oklahoma",
+      "Oregon",
+      "Pennsylvania",
+      "Rhineland-Palatinate",
+      "South Africa",
+      "South Carolina",
+      "South Dakota",
+      "Tennessee",
+      "Texas",
+      "Tokyo",
+      "Utah",
+      "Vermont",
+      "Virginia",
+      "Washington",
+      "West Palm Beach",
+      "West Virginia",
+      "Wisconsin",
+      "Wyoming",
+      "current and upcoming opportunities for West Coast and Pacific Region"
+    ],
+    "listingsByCategory": {
+      "operations": 282,
+      "project-management": 1454,
+      "resource-management": 1
+    },
+    "listingsByIndustry": {
+      "Architecture & Engineering": 1737
+    },
+    "unmatchedIndustries": [],
+    "aiCallsMade": 0,
+    "aiCallsSkipped": 0,
+    "topCompanies": [
+      {
+        "name": "ardurra.com",
+        "count": 93
+      },
+      {
+        "name": "Ryan",
+        "count": 87
+      },
+      {
+        "name": "GPLA Structural Engineers and Builders",
+        "count": 86
+      },
+      {
+        "name": "Donald W. McIntosh Associates",
+        "count": 81
+      },
+      {
+        "name": "Partner Engineering",
+        "count": 64
+      },
+      {
+        "name": "KPFF Consulting Engineers Iowa",
+        "count": 48
+      },
+      {
+        "name": "Bkf Engineers",
+        "count": 46
+      },
+      {
+        "name": "DOWL",
+        "count": 46
+      },
+      {
+        "name": "MD Design",
+        "count": 46
+      },
+      {
+        "name": "LaBella Associates, D.P.C.",
+        "count": 44
+      }
+    ]
   }
 ]
