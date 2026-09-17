@@ -26231,5 +26231,150 @@
         "count": 43
       }
     ]
+  },
+  {
+    "timestamp": "2026-09-17T13:33:14.757Z",
+    "durationMs": 926943,
+    "summary": {
+      "totalIngested": 10866,
+      "afterDedup": 10371,
+      "afterFilter": 1812,
+      "afterQualityFilter": 318,
+      "created": 146,
+      "updated": 172,
+      "expired": 184,
+      "deleted": 145,
+      "skipped": 1494,
+      "errors": 0
+    },
+    "uniqueCompanies": 170,
+    "uniqueStates": [
+      "AU",
+      "Alabama",
+      "Alaska",
+      "Alberta",
+      "Arizona",
+      "Australia",
+      "CAN",
+      "California",
+      "Canada",
+      "Colorado",
+      "Connecticut",
+      "Delaware",
+      "District of Columbia",
+      "Florida",
+      "Georgia",
+      "Hawaii",
+      "Idaho",
+      "Illinois",
+      "Inc.",
+      "Inc. - Albuquerque Office",
+      "Inc. - Atlanta Office",
+      "Inc. - Denver Office",
+      "Inc. - Kansas City Office",
+      "Inc. - San Francisco - Larkspur Office",
+      "Inc.-San Francisco-San Mateo Office",
+      "Indiana",
+      "Iowa",
+      "Jacksonville",
+      "Jr. Building",
+      "Kansas",
+      "Kentucky",
+      "LLC",
+      "Louisiana",
+      "Maine",
+      "Maryland",
+      "Massachusetts",
+      "Metropolitan City of Naples",
+      "Metropolitan City of Rome Capital",
+      "Miami",
+      "Michigan",
+      "Minnesota",
+      "Missouri",
+      "Montana",
+      "Nebraska",
+      "Nevada",
+      "New Hampshire",
+      "New Jersey",
+      "New Mexico",
+      "New York",
+      "North Carolina",
+      "Nova Scotia",
+      "ON",
+      "Ohio",
+      "Oklahoma",
+      "Oregon",
+      "Pennsylvania",
+      "Rhineland-Palatinate",
+      "South Africa",
+      "South Carolina",
+      "South Dakota",
+      "Tennessee",
+      "Texas",
+      "Titusville",
+      "Tokyo",
+      "UK",
+      "Utah",
+      "Vermont",
+      "Virginia",
+      "Washington",
+      "West Palm Beach",
+      "West Virginia",
+      "Wisconsin",
+      "Wyoming"
+    ],
+    "listingsByCategory": {
+      "operations": 279,
+      "project-management": 1532,
+      "resource-management": 1
+    },
+    "listingsByIndustry": {
+      "Architecture & Engineering": 1812
+    },
+    "unmatchedIndustries": [],
+    "aiCallsMade": 0,
+    "aiCallsSkipped": 0,
+    "topCompanies": [
+      {
+        "name": "GPLA Structural Engineers and Builders",
+        "count": 99
+      },
+      {
+        "name": "Ryan",
+        "count": 92
+      },
+      {
+        "name": "ardurra.com",
+        "count": 92
+      },
+      {
+        "name": "Donald W. McIntosh Associates",
+        "count": 78
+      },
+      {
+        "name": "Partner Engineering",
+        "count": 64
+      },
+      {
+        "name": "Bkf Engineers",
+        "count": 47
+      },
+      {
+        "name": "DOWL",
+        "count": 46
+      },
+      {
+        "name": "LaBella Associates, D.P.C.",
+        "count": 45
+      },
+      {
+        "name": "KPFF Consulting Engineers Iowa",
+        "count": 45
+      },
+      {
+        "name": "Fisher Associates",
+        "count": 44
+      }
+    ]
   }
 ]
