@@ -29786,5 +29786,151 @@
         "count": 43
       }
     ]
+  },
+  {
+    "timestamp": "2026-10-12T17:56:44.781Z",
+    "durationMs": 966452,
+    "summary": {
+      "totalIngested": 11061,
+      "afterDedup": 10531,
+      "afterFilter": 1746,
+      "afterQualityFilter": 288,
+      "created": 141,
+      "updated": 147,
+      "expired": 189,
+      "deleted": 146,
+      "skipped": 1458,
+      "errors": 0
+    },
+    "uniqueCompanies": 171,
+    "uniqueStates": [
+      "AB",
+      "AU",
+      "Alabama",
+      "Alaska",
+      "Alberta",
+      "Arizona",
+      "Australia",
+      "CAN",
+      "California",
+      "Canada",
+      "Colorado",
+      "Connecticut",
+      "Delaware",
+      "District of Columbia",
+      "Florida",
+      "Georgia",
+      "Germany",
+      "Hawaii",
+      "IQ",
+      "Idaho",
+      "Illinois",
+      "Inc.",
+      "Inc. - Albuquerque Office",
+      "Inc. - Atlanta Office",
+      "Inc. - Denver Office",
+      "Inc. - Kansas City Office",
+      "Inc. - San Francisco - Larkspur Office",
+      "Inc. - San Francisco - San Mateo Office",
+      "Indiana",
+      "Iowa",
+      "Kansas",
+      "Kentucky",
+      "LLC",
+      "LLC.",
+      "Louisiana",
+      "Maine",
+      "Maryland",
+      "Massachusetts",
+      "Metropolitan City of Naples",
+      "Metropolitan City of Rome Capital",
+      "Miami",
+      "Michigan",
+      "Minnesota",
+      "Missouri",
+      "Montana",
+      "Nebraska",
+      "Nevada",
+      "New Hampshire",
+      "New Jersey",
+      "New Mexico",
+      "New York",
+      "North Carolina",
+      "ON",
+      "Ohio",
+      "Oklahoma",
+      "Ontario",
+      "Oregon",
+      "Pennsylvania",
+      "Rhineland-Palatinate",
+      "South Carolina",
+      "South Dakota",
+      "Spain",
+      "Tampa",
+      "Tennessee",
+      "Texas",
+      "Tokyo",
+      "United Kingdom",
+      "Utah",
+      "Vermont",
+      "Virginia",
+      "Washington",
+      "West Palm Beach",
+      "West Virginia",
+      "Wisconsin",
+      "Wyoming"
+    ],
+    "listingsByCategory": {
+      "operations": 275,
+      "project-management": 1471
+    },
+    "listingsByIndustry": {
+      "Architecture & Engineering": 1746
+    },
+    "unmatchedIndustries": [],
+    "aiCallsMade": 0,
+    "aiCallsSkipped": 0,
+    "topCompanies": [
+      {
+        "name": "GPLA Structural Engineers and Builders",
+        "count": 124
+      },
+      {
+        "name": "ardurra.com",
+        "count": 95
+      },
+      {
+        "name": "Donald W. McIntosh Associates",
+        "count": 72
+      },
+      {
+        "name": "Partner Engineering",
+        "count": 60
+      },
+      {
+        "name": "Fisher Associates",
+        "count": 49
+      },
+      {
+        "name": "MD Design",
+        "count": 48
+      },
+      {
+        "name": "Bkf Engineers",
+        "count": 46
+      },
+      {
+        "name": "LaBella Associates, D.P.C.",
+        "count": 45
+      },
+      {
+        "name": "DOWL",
+        "count": 45
+      },
+      {
+        "name": "Salas O'Brien",
+        "count": 41
+      }
+    ]
   }
 ]
