@@ -31814,5 +31814,143 @@
         "count": 41
       }
     ]
+  },
+  {
+    "timestamp": "2026-10-26T15:19:03.096Z",
+    "durationMs": 940227,
+    "summary": {
+      "totalIngested": 10116,
+      "afterDedup": 9564,
+      "afterFilter": 1489,
+      "afterQualityFilter": 290,
+      "created": 137,
+      "updated": 153,
+      "expired": 166,
+      "deleted": 138,
+      "skipped": 1199,
+      "errors": 0
+    },
+    "uniqueCompanies": 130,
+    "uniqueStates": [
+      "AB",
+      "AU",
+      "Alabama",
+      "Alaska",
+      "Alberta",
+      "Arizona",
+      "Australia",
+      "CAN",
+      "California",
+      "Canada",
+      "Colorado",
+      "Connecticut",
+      "Delaware",
+      "District of Columbia",
+      "Florida",
+      "Georgia",
+      "Germany",
+      "Hawaii",
+      "IQ",
+      "Idaho",
+      "Illinois",
+      "Inc.",
+      "Inc. - Albuquerque Office",
+      "Inc. - Atlanta Office",
+      "Inc. - Denver Office",
+      "Inc. - Kansas City Office",
+      "Inc. - San Francisco - Larkspur Office",
+      "Inc. - San Francisco - San Mateo Office",
+      "Indiana",
+      "Iowa",
+      "Kansas",
+      "Kentucky",
+      "Louisiana",
+      "Maryland",
+      "Massachusetts",
+      "Metropolitan City of Naples",
+      "Metropolitan City of Rome Capital",
+      "Michigan",
+      "Minnesota",
+      "Missouri",
+      "Montana",
+      "Nevada",
+      "New Hampshire",
+      "New Jersey",
+      "New Mexico",
+      "New York",
+      "North Carolina",
+      "ON",
+      "Ohio",
+      "Oklahoma",
+      "Ontario",
+      "Oregon",
+      "Pennsylvania",
+      "Rhineland-Palatinate",
+      "South Carolina",
+      "South Dakota",
+      "Tennessee",
+      "Texas",
+      "Tokyo",
+      "United Kingdom",
+      "Utah",
+      "Virginia",
+      "Washington",
+      "West Virginia",
+      "Wisconsin",
+      "Wyoming"
+    ],
+    "listingsByCategory": {
+      "project-management": 1202,
+      "operations": 285,
+      "resource-management": 2
+    },
+    "listingsByIndustry": {
+      "Architecture & Engineering": 1489
+    },
+    "unmatchedIndustries": [],
+    "aiCallsMade": 0,
+    "aiCallsSkipped": 0,
+    "topCompanies": [
+      {
+        "name": "GPLA Structural Engineers and Builders",
+        "count": 133
+      },
+      {
+        "name": "ardurra.com",
+        "count": 95
+      },
+      {
+        "name": "Donald W. McIntosh Associates",
+        "count": 70
+      },
+      {
+        "name": "Partner Engineering",
+        "count": 62
+      },
+      {
+        "name": "MD Design",
+        "count": 57
+      },
+      {
+        "name": "DOWL",
+        "count": 50
+      },
+      {
+        "name": "LaBella Associates, D.P.C.",
+        "count": 44
+      },
+      {
+        "name": "Helix Electric",
+        "count": 43
+      },
+      {
+        "name": "Bkf Engineers",
+        "count": 42
+      },
+      {
+        "name": "KPFF Consulting Engineers Iowa",
+        "count": 40
+      }
+    ]
   }
 ]
