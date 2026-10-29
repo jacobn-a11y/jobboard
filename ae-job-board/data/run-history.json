@@ -32246,5 +32246,144 @@
         "count": 41
       }
     ]
+  },
+  {
+    "timestamp": "2026-10-29T15:21:41.311Z",
+    "durationMs": 891874,
+    "summary": {
+      "totalIngested": 9926,
+      "afterDedup": 9388,
+      "afterFilter": 1442,
+      "afterQualityFilter": 283,
+      "created": 135,
+      "updated": 148,
+      "expired": 162,
+      "deleted": 135,
+      "skipped": 1159,
+      "errors": 0
+    },
+    "uniqueCompanies": 136,
+    "uniqueStates": [
+      "AB",
+      "AU",
+      "Alabama",
+      "Alaska",
+      "Alberta",
+      "Arizona",
+      "Australia",
+      "CAN",
+      "California",
+      "Canada",
+      "Colorado",
+      "Connecticut",
+      "Delaware",
+      "District of Columbia",
+      "Florida",
+      "Georgia",
+      "Germany",
+      "Hawaii",
+      "IQ",
+      "Idaho",
+      "Illinois",
+      "Inc.",
+      "Indiana",
+      "Iowa",
+      "Kansas",
+      "Kentucky",
+      "LLC.",
+      "Louisiana",
+      "Maine",
+      "Maryland",
+      "Massachusetts",
+      "Metropolitan City of Naples",
+      "Metropolitan City of Rome Capital",
+      "Miami",
+      "Michigan",
+      "Minnesota",
+      "Missouri",
+      "Montana",
+      "Nevada",
+      "New Hampshire",
+      "New Jersey",
+      "New Mexico",
+      "New York",
+      "North Carolina",
+      "ON",
+      "Ohio",
+      "Oklahoma",
+      "Ontario",
+      "Oregon",
+      "Pennsylvania",
+      "Rhineland-Palatinate",
+      "Solomon Island Branch",
+      "South Carolina",
+      "South Dakota",
+      "South Korea",
+      "Tampa",
+      "Tennessee",
+      "Texas",
+      "Tokyo",
+      "United Kingdom",
+      "Utah",
+      "Virginia",
+      "Washington",
+      "West Palm Beach",
+      "West Virginia",
+      "Wisconsin",
+      "Wyoming"
+    ],
+    "listingsByCategory": {
+      "project-management": 1184,
+      "operations": 256,
+      "resource-management": 2
+    },
+    "listingsByIndustry": {
+      "Architecture & Engineering": 1442
+    },
+    "unmatchedIndustries": [],
+    "aiCallsMade": 0,
+    "aiCallsSkipped": 0,
+    "topCompanies": [
+      {
+        "name": "GPLA Structural Engineers and Builders",
+        "count": 136
+      },
+      {
+        "name": "ardurra.com",
+        "count": 97
+      },
+      {
+        "name": "Donald W. McIntosh Associates",
+        "count": 69
+      },
+      {
+        "name": "Partner Engineering",
+        "count": 62
+      },
+      {
+        "name": "DOWL",
+        "count": 51
+      },
+      {
+        "name": "MD Design",
+        "count": 51
+      },
+      {
+        "name": "LaBella Associates, D.P.C.",
+        "count": 44
+      },
+      {
+        "name": "Helix Electric",
+        "count": 44
+      },
+      {
+        "name": "Salas O'Brien",
+        "count": 41
+      },
+      {
+        "name": "KPFF Consulting Engineers Iowa",
+        "count": 40
+      }
+    ]
   }
 ]
