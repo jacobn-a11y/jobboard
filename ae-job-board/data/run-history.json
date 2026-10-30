@@ -32385,5 +32385,154 @@
         "count": 40
       }
     ]
+  },
+  {
+    "timestamp": "2026-10-30T15:13:36.041Z",
+    "durationMs": 939294,
+    "summary": {
+      "totalIngested": 10991,
+      "afterDedup": 10459,
+      "afterFilter": 1683,
+      "afterQualityFilter": 283,
+      "created": 132,
+      "updated": 151,
+      "expired": 162,
+      "deleted": 132,
+      "skipped": 1400,
+      "errors": 0
+    },
+    "uniqueCompanies": 171,
+    "uniqueStates": [
+      "AB",
+      "AU",
+      "Alabama",
+      "Alaska",
+      "Alberta",
+      "Arizona",
+      "Arkansas",
+      "Australia",
+      "CAN",
+      "California",
+      "Canada",
+      "Colorado",
+      "Connecticut",
+      "Delaware",
+      "District of Columbia",
+      "Florida",
+      "Georgia",
+      "Germany",
+      "Hawaii",
+      "IQ",
+      "Idaho",
+      "Illinois",
+      "Inc.",
+      "Inc. - Albuquerque Office",
+      "Inc. - Atlanta Office",
+      "Inc. - Denver Office",
+      "Inc. - Kansas City Office",
+      "Inc. - San Francisco - Larkspur Office",
+      "Inc. - San Francisco - San Mateo Office",
+      "Indiana",
+      "Iowa",
+      "Kansas",
+      "Kentucky",
+      "LLC",
+      "LLC.",
+      "Louisiana",
+      "Maine",
+      "Maryland",
+      "Massachusetts",
+      "Metropolitan City of Naples",
+      "Metropolitan City of Rome Capital",
+      "Miami",
+      "Michigan",
+      "Minnesota",
+      "Missouri",
+      "Montana",
+      "Nevada",
+      "New Hampshire",
+      "New Jersey",
+      "New Mexico",
+      "New York",
+      "North Carolina",
+      "ON",
+      "Ohio",
+      "Oklahoma",
+      "Ontario",
+      "Oregon",
+      "Pennsylvania",
+      "Rhineland-Palatinate",
+      "Rhode Island",
+      "Solomon Island Branch",
+      "South Carolina",
+      "South Dakota",
+      "South Korea",
+      "Tampa",
+      "Tennessee",
+      "Texas",
+      "Tokyo",
+      "United Kingdom",
+      "Utah",
+      "Vermont",
+      "Virginia",
+      "Washington",
+      "West Palm Beach",
+      "West Virginia",
+      "Wisconsin",
+      "Wyoming"
+    ],
+    "listingsByCategory": {
+      "project-management": 1411,
+      "operations": 270,
+      "resource-management": 2
+    },
+    "listingsByIndustry": {
+      "Architecture & Engineering": 1683
+    },
+    "unmatchedIndustries": [],
+    "aiCallsMade": 0,
+    "aiCallsSkipped": 0,
+    "topCompanies": [
+      {
+        "name": "GPLA Structural Engineers and Builders",
+        "count": 134
+      },
+      {
+        "name": "ardurra.com",
+        "count": 99
+      },
+      {
+        "name": "Donald W. McIntosh Associates",
+        "count": 68
+      },
+      {
+        "name": "Partner Engineering",
+        "count": 62
+      },
+      {
+        "name": "DOWL",
+        "count": 51
+      },
+      {
+        "name": "MD Design",
+        "count": 51
+      },
+      {
+        "name": "Fisher Associates",
+        "count": 49
+      },
+      {
+        "name": "Helix Electric",
+        "count": 46
+      },
+      {
+        "name": "LaBella Associates, D.P.C.",
+        "count": 44
+      },
+      {
+        "name": "Salas O'Brien",
+        "count": 41
+      }
+    ]
   }
 ]
