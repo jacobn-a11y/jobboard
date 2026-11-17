@@ -35003,5 +35003,150 @@
         "count": 44
       }
     ]
+  },
+  {
+    "timestamp": "2026-11-17T17:44:17.843Z",
+    "durationMs": 811954,
+    "summary": {
+      "totalIngested": 10702,
+      "afterDedup": 10165,
+      "afterFilter": 1692,
+      "afterQualityFilter": 284,
+      "created": 139,
+      "updated": 145,
+      "expired": 161,
+      "deleted": 145,
+      "skipped": 1408,
+      "errors": 0
+    },
+    "uniqueCompanies": 167,
+    "uniqueStates": [
+      "Alabama",
+      "Alaska",
+      "Alberta",
+      "Arizona",
+      "Arkansas",
+      "Australia",
+      "British Columbia",
+      "CAN",
+      "California",
+      "Canada",
+      "Colorado",
+      "Connecticut",
+      "Delaware",
+      "District of Columbia",
+      "Florida",
+      "Georgia",
+      "Germany",
+      "Hawaii",
+      "Idaho",
+      "Illinois",
+      "Inc.",
+      "Inc. - Albuquerque Office",
+      "Inc. - Atlanta Office",
+      "Inc. - Denver Office",
+      "Inc. - Kansas City Office",
+      "Inc. - San Francisco - Larkspur Office",
+      "Inc. - San Francisco - San Mateo Office",
+      "India",
+      "Indiana",
+      "Iowa",
+      "Kansas",
+      "Kentucky",
+      "LLC",
+      "LLC.",
+      "Louisiana",
+      "Maryland",
+      "Massachusetts",
+      "Metropolitan City of Naples",
+      "Miami",
+      "Michigan",
+      "Minnesota",
+      "Missouri",
+      "Montana",
+      "Nebraska",
+      "Nevada",
+      "New Hampshire",
+      "New Jersey",
+      "New Mexico",
+      "New York",
+      "North Carolina",
+      "Nova Scotia",
+      "ON",
+      "Ohio",
+      "Oklahoma",
+      "Ontario",
+      "Oregon",
+      "Pennsylvania",
+      "Rhineland-Palatinate",
+      "South Carolina",
+      "South Dakota",
+      "Tampa",
+      "Tennessee",
+      "Texas",
+      "Tokyo",
+      "United Kingdom",
+      "Utah",
+      "Vermont",
+      "Virginia",
+      "Washington",
+      "West Palm Beach",
+      "West Virginia",
+      "Wisconsin",
+      "Wyoming"
+    ],
+    "listingsByCategory": {
+      "project-management": 1434,
+      "operations": 257,
+      "resource-management": 1
+    },
+    "listingsByIndustry": {
+      "Architecture & Engineering": 1692
+    },
+    "unmatchedIndustries": [],
+    "aiCallsMade": 0,
+    "aiCallsSkipped": 0,
+    "topCompanies": [
+      {
+        "name": "GPLA Structural Engineers and Builders",
+        "count": 136
+      },
+      {
+        "name": "ardurra.com",
+        "count": 104
+      },
+      {
+        "name": "Donald W. McIntosh Associates",
+        "count": 61
+      },
+      {
+        "name": "Partner Engineering",
+        "count": 60
+      },
+      {
+        "name": "Fisher Associates",
+        "count": 49
+      },
+      {
+        "name": "Helix Electric",
+        "count": 48
+      },
+      {
+        "name": "DOWL",
+        "count": 47
+      },
+      {
+        "name": "MD Design",
+        "count": 47
+      },
+      {
+        "name": "Salas O'Brien",
+        "count": 45
+      },
+      {
+        "name": "KPFF Consulting Engineers Iowa",
+        "count": 43
+      }
+    ]
   }
 ]
